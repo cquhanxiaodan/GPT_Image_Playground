@@ -3,7 +3,6 @@ import type {
   AppSettings,
   ProviderConfig,
 } from '../../../../types'
-import type { DevProxyConfig } from '../../../../lib/devProxy'
 import ApiConnectionFields from './ApiConnectionFields'
 import ApiModelSettings from './ApiModelSettings'
 import ApiProviderFields from './ApiProviderFields'
@@ -22,7 +21,6 @@ interface ApiSettingsSectionProps {
   setProviderNameInput: Dispatch<SetStateAction<string>>
   providers: ProviderConfig[]
   activeProviderId: string
-  proxyConfig: DevProxyConfig | null
   commitSettings: (nextDraft: AppSettings) => void
   commitProviderName: () => void
   commitTimeout: () => void
@@ -43,7 +41,6 @@ export default function ApiSettingsSection({
   setProviderNameInput,
   providers,
   activeProviderId,
-  proxyConfig,
   commitSettings,
   commitProviderName,
   commitTimeout,
@@ -82,11 +79,7 @@ export default function ApiSettingsSection({
           commitSettings={commitSettings}
         />
 
-        <ApiRequestSettings
-          draft={draft}
-          proxyConfig={proxyConfig}
-          commitSettings={commitSettings}
-        />
+        <ApiRequestSettings />
 
         <ApiModelSettings
           draft={draft}
@@ -94,10 +87,7 @@ export default function ApiSettingsSection({
           commitSettings={commitSettings}
         />
 
-        <ApiResponsesSettings
-          draft={draft}
-          commitSettings={commitSettings}
-        />
+        <ApiResponsesSettings />
 
         <ApiTimeoutField
           timeoutInput={timeoutInput}

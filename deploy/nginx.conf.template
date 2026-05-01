@@ -1,0 +1,33 @@
+server {
+    listen 80;
+    server_name _;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    gzip on;
+    gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript image/svg+xml;
+    gzip_min_length 256;
+
+    # Same-origin API proxy. Nginx forwards directly to the local relay port,
+    # so browser traffic may pass through Cloudflare while API traffic does not.
+    location /api-proxy/ {
+        proxy_pass ${LOCAL_API_PROXY_TARGET}/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $proxy_host;
+        proxy_set_header Authorization $http_authorization;
+        proxy_set_header Accept-Encoding identity;
+        proxy_read_timeout 600s;
+        proxy_send_timeout 60s;
+        proxy_buffering off;
+    }
+
+    location /assets/ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}

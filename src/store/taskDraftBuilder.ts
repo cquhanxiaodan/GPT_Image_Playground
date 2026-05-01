@@ -1,4 +1,5 @@
 import { normalizeImageSize } from '../lib/size'
+import { preparePromptText } from '../lib/prompt'
 import type {
   AppSettings,
   CategoryConfig,
@@ -45,6 +46,7 @@ export interface StagedTaskDraftAssets {
 export interface PreparedTaskDraft {
   task: TaskRecord
   requestSettings: AppSettings
+  promptWasTruncated: boolean
   normalizedParamsPatch?: Partial<TaskParams>
 }
 
@@ -64,6 +66,7 @@ export interface ImageEditDraftWriteInput {
 export interface ImageEditDraftWriteResult {
   nextProviderId: string | null
   nextPrompt: string
+  promptWasTruncated: boolean
   nextParams: TaskParams
   nextInputImages: InputImage[]
 }
@@ -108,6 +111,7 @@ export function buildPreparedTaskDraft(
     ? getProviderSettings(selectedProvider)
     : snapshot.settings
   const { parentTaskId, parentImageId } = resolveTaskParentFromInputImages(snapshot.inputImages)
+  const preparedPrompt = preparePromptText(snapshot.prompt)
 
   return {
     task: createGenerationTaskRecord({
@@ -117,7 +121,7 @@ export function buildPreparedTaskDraft(
       categoryName: selectedCategory?.name ?? null,
       parentTaskId,
       parentImageId,
-      prompt: snapshot.prompt.trim(),
+      prompt: preparedPrompt.value,
       params: normalizedParams,
       inputImageIds: stagedAssets.inputImageIds,
       editMaskImageId: stagedAssets.editMaskImageId,
@@ -125,6 +129,7 @@ export function buildPreparedTaskDraft(
       editSelection: stagedAssets.maskedInput?.editSelection ?? null,
     }),
     requestSettings,
+    promptWasTruncated: preparedPrompt.truncated,
     normalizedParamsPatch:
       normalizedSize !== snapshot.params.size
         ? {
@@ -143,10 +148,12 @@ export function writeImageEditDraft(input: ImageEditDraftWriteInput): ImageEditD
   const derivedSourceTaskId =
     input.session.lineageParentTaskId ??
     (input.session.taskId && input.session.taskId !== 'input-image' ? input.session.taskId : null)
+  const preparedPrompt = preparePromptText(input.prompt)
 
   return {
     nextProviderId,
-    nextPrompt: input.prompt.trim(),
+    nextPrompt: preparedPrompt.value,
+    promptWasTruncated: preparedPrompt.truncated,
     nextParams: {
       ...input.session.params,
       n: 1,

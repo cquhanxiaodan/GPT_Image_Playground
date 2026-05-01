@@ -69,7 +69,7 @@ function shouldBlockTransportFallback(error: unknown): boolean {
   }
 
   const status = (error as ApiError).status
-  return status != null && [401, 403, 429, 524].includes(status)
+  return status != null && [401, 403, 429].includes(status)
 }
 
 function buildTransportMeta(

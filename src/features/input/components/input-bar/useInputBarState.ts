@@ -10,6 +10,7 @@ import {
   type RefObject,
   type SetStateAction,
 } from 'react'
+import { PROMPT_HARD_LIMIT, PROMPT_SOFT_LIMIT } from '../../../../lib/prompt'
 import { DEFAULT_PARAMS, openLightbox, resolveTaskParamSizeOrDefault, useStore, submitTask } from '../../../../store'
 import {
   ALL_CATEGORY_FILTER,
@@ -31,6 +32,9 @@ interface ProviderOption {
 export interface PromptSectionViewModel {
   prompt: string
   normalizedPrompt: string
+  promptLength: number
+  softLimit: number
+  hardLimit: number
   promptHintText: string
   isMobile: boolean
   textareaRef: RefObject<HTMLTextAreaElement | null>
@@ -171,6 +175,7 @@ export function useInputBarState(): InputBarViewModel {
   const primaryMaskedInput =
     primaryMaskedInputIndex >= 0 ? inputImages[primaryMaskedInputIndex] : null
   const normalizedPrompt = prompt.trim()
+  const promptLength = normalizedPrompt.length
   const promptPreview =
     normalizedPrompt.replace(/\s+/g, ' ').slice(0, 120) || '输入框已收起，点击展开继续编辑'
   const normalizedSize = resolveTaskParamSizeOrDefault(params.size)
@@ -233,6 +238,9 @@ export function useInputBarState(): InputBarViewModel {
   const promptSectionProps = usePromptInputController({
     prompt,
     normalizedPrompt,
+    promptLength,
+    softLimit: PROMPT_SOFT_LIMIT,
+    hardLimit: PROMPT_HARD_LIMIT,
     promptHintText,
     isMobile,
     inputImageCount: inputImages.length,

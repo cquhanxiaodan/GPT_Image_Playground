@@ -30,15 +30,8 @@ function resolveEditSourceImageIndex(intent: CallImageApiIntent): number | undef
 }
 
 function buildCallApiOptions(intent: CallImageApiIntent): CallApiOptions {
-  const settings = import.meta.env.DEV
-    ? intent.settings
-    : {
-        ...intent.settings,
-        requestMode: 'direct' as const,
-      }
-
   return {
-    settings,
+    settings: intent.settings,
     prompt: intent.prompt,
     params: intent.params,
     inputImageDataUrls: intent.inputImages.map((image) => image.dataUrl),
@@ -54,7 +47,6 @@ function createApiCallRuntime(intent: CallImageApiIntent): ApiCallRuntime {
   const baseOpts = buildCallApiOptions(intent)
   const mime = MIME_MAP[baseOpts.params.output_format] || 'image/png'
   const proxyConfig = readClientDevProxyConfig()
-  const forceProxy = import.meta.env.DEV && baseOpts.settings.requestMode === 'local_proxy'
   const debugLog: ApiDebugRequestLogEntry[] = []
   const requestHeaders: Record<string, string> = {
     Authorization: `Bearer ${baseOpts.settings.apiKey}`,
@@ -72,7 +64,7 @@ function createApiCallRuntime(intent: CallImageApiIntent): ApiCallRuntime {
       requestHeaders,
       proxyConfig,
       mime,
-      forceProxy,
+      forceProxy: Boolean(proxyConfig?.enabled),
       debugLog,
     },
   }
@@ -81,15 +73,7 @@ function createApiCallRuntime(intent: CallImageApiIntent): ApiCallRuntime {
 async function prepareApiCallRuntime(runtime: ApiCallRuntime): Promise<void> {
   const { baseOpts, ctx } = runtime
 
-  const shouldUseProxy = ctx.forceProxy || (import.meta.env.DEV && ctx.proxyConfig?.enabled && ctx.proxyConfig.prefix)
-
-  if (ctx.forceProxy && !ctx.proxyConfig?.enabled) {
-    throw createApiError(
-      '本地代理模式已启用，但未检测到可用的开发代理。请确认 dev-proxy.config.json 存在，并重启 npm run dev。',
-    )
-  }
-
-  if (shouldUseProxy) {
+  if (ctx.forceProxy) {
     const proxyTargetBaseUrl = normalizeProxyTargetBaseUrl(baseOpts.settings.baseUrl)
     if (!proxyTargetBaseUrl) {
       throw createApiError('API URL 无效，请检查设置中的 API URL')

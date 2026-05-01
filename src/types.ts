@@ -10,6 +10,7 @@ export interface AppSettings {
   baseUrl: string
   apiKey: string
   model: string
+  visionModel: string
   responsesImageModel: string
   responsesTransport: ResponsesTransportMode
   responsesImageInputMode: ResponsesImageInputMode
@@ -139,12 +140,13 @@ export const UNCATEGORIZED_CATEGORY_FILTER = '__uncategorized__'
 export { DEFAULT_PARAMS, UNCATEGORIZED_CATEGORY_NAME, UNKNOWN_TASK_PROVIDER_NAME }
 
 const DEFAULT_BASE_URL = import.meta.env.VITE_DEFAULT_API_URL?.trim() || 'https://api.openai.com'
-const DEFAULT_REQUEST_MODE: RequestMode = import.meta.env.DEV ? 'local_proxy' : 'direct'
+const DEFAULT_REQUEST_MODE: RequestMode = 'direct'
 
 export const DEFAULT_SETTINGS: AppSettings = {
   baseUrl: DEFAULT_BASE_URL,
   apiKey: '',
   model: 'gpt-image-2',
+  visionModel: '',
   responsesImageModel: 'gpt-image-2',
   responsesTransport: 'auto',
   responsesImageInputMode: 'auto',

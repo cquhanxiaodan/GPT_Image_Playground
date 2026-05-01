@@ -1,5 +1,7 @@
+import { useCallback, useEffect, useState } from 'react'
 import type { AppSettings } from '../../../../types'
 import type { Dispatch, SetStateAction } from 'react'
+import { fetchModels, type ModelInfo } from '../../../../lib/api/models'
 import { fieldClassName } from './apiSettingsShared'
 
 interface ApiModelSettingsProps {
@@ -13,10 +15,44 @@ export default function ApiModelSettings({
   setDraft,
   commitSettings,
 }: ApiModelSettingsProps) {
+  const [chatModels, setChatModels] = useState<ModelInfo[]>([])
+  const [loadingModels, setLoadingModels] = useState(false)
+  const [modelsError, setModelsError] = useState('')
+
+  const loadModels = useCallback(async () => {
+    if (!draft.baseUrl || !draft.apiKey) {
+      setModelsError('请先填写 API URL 和 API Key')
+      return
+    }
+    setLoadingModels(true)
+    setModelsError('')
+    try {
+      const allModels = await fetchModels(draft.baseUrl, draft.apiKey)
+      const filtered = allModels.filter(
+        (m) => !m.id.toLowerCase().includes('image') && !m.id.toLowerCase().includes('dall-e') && !m.id.toLowerCase().includes('tts') && !m.id.toLowerCase().includes('whisper') && !m.id.toLowerCase().includes('embedding'),
+      )
+      setChatModels(filtered)
+      if (filtered.length === 0) {
+        setModelsError('未找到可用的视觉模型')
+      }
+    } catch (err) {
+      setModelsError(err instanceof Error ? err.message : '获取模型列表失败')
+      setChatModels([])
+    } finally {
+      setLoadingModels(false)
+    }
+  }, [draft.baseUrl, draft.apiKey])
+
+  useEffect(() => {
+    if (draft.baseUrl && draft.apiKey && chatModels.length === 0 && !loadingModels) {
+      loadModels()
+    }
+  }, [draft.baseUrl, draft.apiKey, chatModels.length, loadingModels, loadModels])
+
   return (
     <>
       <label className="block">
-        <span className="mb-1 block text-xs text-gray-500 dark:text-gray-400">模型 ID</span>
+        <span className="mb-1 block text-xs text-gray-500 dark:text-gray-400">图片生成模型</span>
         <input
           value={draft.model}
           onChange={(event) => setDraft((prev) => ({ ...prev, model: event.target.value }))}
@@ -25,23 +61,46 @@ export default function ApiModelSettings({
           placeholder="gpt-image-2"
           className={fieldClassName}
         />
-        <div className="mt-1 text-[10px] text-gray-400 dark:text-gray-500">
-          Images API 下这里是直接调用的图片模型；Responses API 下这里是顶层主模型，应该填可用的文本模型，例如 <code className="rounded bg-gray-100 px-1 py-0.5 dark:bg-white/[0.06]">gpt-5.5</code>，不要填 <code className="rounded bg-gray-100 px-1 py-0.5 dark:bg-white/[0.06]">gpt-image-*</code>。
-        </div>
       </label>
 
       <label className="block">
-        <span className="mb-1 block text-xs text-gray-500 dark:text-gray-400">Responses 图像模型</span>
-        <input
-          value={draft.responsesImageModel}
-          onChange={(event) => setDraft((prev) => ({ ...prev, responsesImageModel: event.target.value }))}
-          onBlur={(event) => commitSettings({ ...draft, responsesImageModel: event.target.value })}
-          type="text"
-          placeholder="gpt-image-2"
-          className={fieldClassName}
-        />
+        <div className="mb-1 flex items-center justify-between">
+          <span className="text-xs text-gray-500 dark:text-gray-400">视觉模型（参考图转提示词）</span>
+          <button
+            type="button"
+            onClick={loadModels}
+            disabled={loadingModels || !draft.baseUrl || !draft.apiKey}
+            className="text-[10px] text-blue-500 hover:text-blue-600 disabled:opacity-40 dark:text-blue-400 dark:hover:text-blue-300"
+          >
+            {loadingModels ? '加载中...' : '刷新模型列表'}
+          </button>
+        </div>
+        {chatModels.length > 0 ? (
+          <select
+            value={draft.visionModel}
+            onChange={(event) => commitSettings({ ...draft, visionModel: event.target.value })}
+            className={fieldClassName}
+          >
+            <option value="">-- 选择视觉模型 --</option>
+            {chatModels.map((m) => (
+              <option key={m.id} value={m.id}>{m.id}</option>
+            ))}
+          </select>
+        ) : (
+          <input
+            value={draft.visionModel}
+            onChange={(event) => setDraft((prev) => ({ ...prev, visionModel: event.target.value }))}
+            onBlur={(event) => commitSettings({ ...draft, visionModel: event.target.value })}
+            type="text"
+            placeholder="gpt-5.4"
+            className={fieldClassName}
+          />
+        )}
+        {modelsError && (
+          <div className="mt-1 text-[10px] text-amber-500 dark:text-amber-400">{modelsError}</div>
+        )}
         <div className="mt-1 text-[10px] text-gray-400 dark:text-gray-500">
-          仅 Responses API 生效，会作为 <code className="rounded bg-gray-100 px-1 py-0.5 dark:bg-white/[0.06]">tools[].model</code> 传入，通常填 <code className="rounded bg-gray-100 px-1 py-0.5 dark:bg-white/[0.06]">gpt-image-2</code>。
+          添加参考图时，用此模型识别图片内容并转为提示词。留空则使用 gpt-5.4。
         </div>
       </label>
     </>

@@ -35,15 +35,11 @@ function genCategoryId(): string {
 }
 
 function normalizeApiProtocol(value: unknown): ApiProtocol {
-  return value === 'responses' ? 'responses' : 'images'
+  return 'images'
 }
 
 function normalizeRequestMode(value: unknown): AppSettings['requestMode'] {
-  if (!import.meta.env.DEV) {
-    return 'direct'
-  }
-
-  return value === 'direct' ? 'direct' : 'local_proxy'
+  return 'direct'
 }
 
 export function getProviderSettings(provider: ProviderConfig): AppSettings {

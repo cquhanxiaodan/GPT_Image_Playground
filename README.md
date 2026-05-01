@@ -197,7 +197,7 @@ workers/square-api
 - 浏览器侧的“复制完整报错”依赖本地 IndexedDB 中的任务错误快照，不依赖 dev server 文件日志。
 - 本地代理模式会把成功与失败请求分别记录到开发机的 `logs/proxy-success.jsonl` 与 `logs/proxy-error.jsonl`。
 - 支持静态部署。
-- 提供 `deploy/` 下的 Docker 与 Nginx 相关文件。
+- 提供 `deploy/` 下的 Docker 与 Nginx 相关文件，以及本地生产预览脚本。
 - 提供 `manifest.webmanifest` 与 `sw.js`，具备基础 PWA 能力。
 
 ## 技术栈
@@ -285,13 +285,14 @@ npm run preview
 
 - `npm run build` 仅生成静态产物。
 - `npm run preview` 下只能使用 `direct`；`local_proxy` 仍然只在 `npm run dev` 生效。
+- `npm run preview:prod` 会以生产静态资源方式启动本地预览，并把 `/api-proxy/` 同源转发到 `LOCAL_API_PROXY_TARGET`。
 
 ### 4. 部署
 
 - 当前仓库保留了 GitHub Pages 自动部署工作流，配置见 `.github/workflows/deploy.yml`。
 - 推送符合 `v*` 规则的标签后，会自动执行 `npm ci`、`npm run build` 并发布到 GitHub Pages。
 - GitHub Pages、`vite preview`、静态托管等环境都只能使用 `direct`，并且要求上游接口支持浏览器直连（`HTTPS`、`CORS`、预检）。
-- `deploy/` 目录中的 Docker / Nginx 文件仍保留，可作为自托管部署参考。
+- `deploy/` 目录中的 Docker / Nginx 模板仍保留，可作为自托管部署参考。
 
 ### 5. 广场 Worker 常用操作
 
@@ -378,7 +379,7 @@ Invoke-RestMethod "$api/api/v1/admin/cleanup" `
 │  └─ images/                  README 截图资源
 ├─ deploy/
 │  ├─ Dockerfile                Docker 构建文件
-│  ├─ nginx.conf                Nginx 配置
+│  ├─ nginx.conf.template       Nginx 配置模板
 │  └─ inject-api-url.sh         注入默认 API 地址脚本
 ├─ logs/
 │  ├─ proxy-success.jsonl       本地开发代理成功请求日志
@@ -515,7 +516,7 @@ Invoke-RestMethod "$api/api/v1/admin/cleanup" `
 - [CLAUDE.md](./CLAUDE.md)：与 `AGENTS.md` 保持一致的项目级协作说明。
 - [docs/code-style.md](./docs/code-style.md)：详细代码规范。
 - [docs/images](./docs/images)：界面截图。
-- [deploy](./deploy)：Docker / Nginx 部署文件。
+- [deploy](./deploy)：Docker / Nginx 部署文件与生产预览相关脚本。
 - [dev-proxy.config.example.json](./dev-proxy.config.example.json)：本地代理配置模板。
 - [src/store.ts](./src/store.ts)：Store 统一导出入口；具体实现见 [src/store](./src/store)。
 - [src/lib/api.ts](./src/lib/api.ts)：API 统一导出入口；具体实现见 [src/lib/api](./src/lib/api)。

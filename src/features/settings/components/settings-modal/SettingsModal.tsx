@@ -1,19 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { normalizeBaseUrl, readClientDevProxyConfig } from '../../../../lib/devProxy'
+import { normalizeBaseUrl } from '../../../../lib/devProxy'
 import { useStore, exportData, importData, clearAllData } from '../../../../store'
 import { DEFAULT_SETTINGS, type AppSettings } from '../../../../types'
 import { useCloseOnEscape } from '../../../../hooks/useCloseOnEscape'
 import ApiSettingsSection from './ApiSettingsSection'
 import DataManagementSection from './DataManagementSection'
 
-function normalizeRuntimeRequestMode(requestMode: AppSettings['requestMode']): AppSettings['requestMode'] {
-  return import.meta.env.DEV && requestMode === 'local_proxy' ? 'local_proxy' : 'direct'
-}
-
 function normalizeSettingsDraft(settings: AppSettings): AppSettings {
   return {
     ...settings,
-    requestMode: normalizeRuntimeRequestMode(settings.requestMode),
   }
 }
 
@@ -36,7 +31,6 @@ export default function SettingsModal() {
   const [showApiKey, setShowApiKey] = useState(false)
   const [providerNameInput, setProviderNameInput] = useState('')
 
-  const proxyConfig = readClientDevProxyConfig()
   const activeProvider = providers.find((provider) => provider.id === activeProviderId) ?? null
 
   useEffect(() => {
@@ -53,6 +47,7 @@ export default function SettingsModal() {
         baseUrl: normalizeBaseUrl(nextDraft.baseUrl.trim() || DEFAULT_SETTINGS.baseUrl),
         apiKey: nextDraft.apiKey,
         model: nextDraft.model.trim() || DEFAULT_SETTINGS.model,
+        visionModel: nextDraft.visionModel?.trim() || DEFAULT_SETTINGS.visionModel,
         responsesImageModel:
           nextDraft.responsesImageModel.trim() || DEFAULT_SETTINGS.responsesImageModel,
         responsesTransport: nextDraft.responsesTransport || DEFAULT_SETTINGS.responsesTransport,
@@ -62,7 +57,7 @@ export default function SettingsModal() {
           nextDraft.responsesPromptRevisionMode || DEFAULT_SETTINGS.responsesPromptRevisionMode,
         timeout: Number(nextDraft.timeout) || DEFAULT_SETTINGS.timeout,
         apiProtocol: nextDraft.apiProtocol || DEFAULT_SETTINGS.apiProtocol,
-        requestMode: normalizeRuntimeRequestMode(nextDraft.requestMode || DEFAULT_SETTINGS.requestMode),
+        requestMode: nextDraft.requestMode || DEFAULT_SETTINGS.requestMode,
       }
       setDraft(normalizedDraft)
       setSettings(normalizedDraft)
@@ -163,7 +158,6 @@ export default function SettingsModal() {
               setProviderNameInput={setProviderNameInput}
               providers={providers}
               activeProviderId={activeProviderId}
-              proxyConfig={proxyConfig}
               commitSettings={commitSettings}
               commitProviderName={commitProviderName}
               commitTimeout={commitTimeout}

@@ -97,18 +97,14 @@ export function buildApiUrl(
   proxyConfig?: DevProxyConfig | null,
   options?: { forceProxy?: boolean },
 ): string {
-  const normalizedApiBaseUrl = normalizeApiBaseUrl(baseUrl)
   const apiPath = joinUrlPath('/v1', path)
-  const forceProxy = options?.forceProxy === true
-  const isRemoteUrl = /^[a-zA-Z][a-zA-Z\d+.-]*:\/\//.test(normalizedApiBaseUrl)
-  const useProxy =
-    Boolean(proxyConfig?.enabled) &&
-    (forceProxy || isRemoteUrl)
+  const useProxy = Boolean(proxyConfig?.enabled)
 
   if (useProxy) {
     return joinUrlPath(proxyConfig!.prefix, apiPath)
   }
 
+  const normalizedApiBaseUrl = normalizeApiBaseUrl(baseUrl)
   return normalizedApiBaseUrl ? joinUrlPath(normalizedApiBaseUrl, path) : apiPath
 }
 
@@ -118,8 +114,12 @@ export function resolveDevProxyConfig(input: unknown, isDev: boolean): DevProxyC
 }
 
 export function readClientDevProxyConfig(): DevProxyConfig | null {
-  return resolveDevProxyConfig(
-    typeof __DEV_PROXY_CONFIG__ === 'undefined' ? null : __DEV_PROXY_CONFIG__,
-    import.meta.env.DEV,
-  )
+  if (import.meta.env.DEV) {
+    return resolveDevProxyConfig(
+      typeof __DEV_PROXY_CONFIG__ === 'undefined' ? null : __DEV_PROXY_CONFIG__,
+      true,
+    )
+  }
+
+  return { enabled: true, prefix: '/api-proxy', target: '', changeOrigin: true, secure: true }
 }

@@ -1,6 +1,5 @@
 import type {
   ApiProtocol,
-  RequestMode,
   ResponsesImageInputMode,
   ResponsesPromptRevisionMode,
   ResponsesTransportMode,
@@ -9,11 +8,6 @@ import type {
 export const API_PROTOCOL_OPTIONS: Array<{ label: string; value: ApiProtocol }> = [
   { label: 'Images API', value: 'images' },
   { label: 'Responses API', value: 'responses' },
-]
-
-export const REQUEST_MODE_OPTIONS: Array<{ label: string; value: RequestMode }> = [
-  { label: '直连', value: 'direct' },
-  ...(import.meta.env.DEV ? [{ label: '本地代理' as const, value: 'local_proxy' as const }] : []),
 ]
 
 export const RESPONSES_TRANSPORT_OPTIONS: Array<{

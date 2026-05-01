@@ -134,13 +134,15 @@ export async function applyImageEditToInput(options: {
   setInputImages(draft.nextInputImages)
   setImageEditSession(null)
   showToast(
-    options.submit
-      ? options.maskDataUrl
-        ? '已写入输入区，正在提交局部编辑任务'
-        : '已写入输入区，正在提交整图编辑任务'
-      : options.maskDataUrl
-        ? '已写入局部编辑输入区'
-        : '已写入整图编辑输入区',
+    draft.promptWasTruncated
+      ? '提示词过长，已自动截断到 1000 字并写入输入区'
+      : options.submit
+        ? options.maskDataUrl
+          ? '已写入输入区，正在提交局部编辑任务'
+          : '已写入输入区，正在提交整图编辑任务'
+        : options.maskDataUrl
+          ? '已写入局部编辑输入区'
+          : '已写入整图编辑输入区',
     'success',
   )
 

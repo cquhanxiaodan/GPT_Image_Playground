@@ -46,6 +46,10 @@ export async function submitTask() {
   }
 
   const { task, requestSettings, normalizedParamsPatch } = prepared.draft
+  if (prepared.draft.promptWasTruncated) {
+    snapshot.setPrompt(task.prompt)
+    snapshot.showToast('提示词过长，已自动截断到 1000 字后提交', 'info')
+  }
   if (normalizedParamsPatch) {
     snapshot.setParams(normalizedParamsPatch)
   }

@@ -5,6 +5,9 @@ import type { PromptSectionViewModel } from './useInputBarState'
 interface UsePromptInputControllerOptions {
   prompt: string
   normalizedPrompt: string
+  promptLength: number
+  softLimit: number
+  hardLimit: number
   promptHintText: string
   isMobile: boolean
   inputImageCount: number
@@ -18,6 +21,9 @@ export function usePromptInputController(
   const {
     prompt,
     normalizedPrompt,
+    promptLength,
+    softLimit,
+    hardLimit,
     promptHintText,
     isMobile,
     inputImageCount,
@@ -81,6 +87,9 @@ export function usePromptInputController(
   return {
     prompt,
     normalizedPrompt,
+    promptLength,
+    softLimit,
+    hardLimit,
     promptHintText,
     isMobile,
     textareaRef,
