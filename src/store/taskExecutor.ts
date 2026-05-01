@@ -1,4 +1,4 @@
-import type { AppSettings, TaskErrorDebugInfo, TaskRecord } from '../types'
+import type { AppSettings, TaskErrorDebugInfo, TaskRecord, TaskVisionDebugInfo } from '../types'
 import { DEFAULT_SETTINGS } from '../types'
 import {
   clearTaskAbortState,
@@ -29,11 +29,15 @@ function readLocalDebugFromErrorDetails(details: unknown): TaskErrorDebugInfo | 
 function buildTaskErrorDebugInfo(
   requestSettings: AppSettings,
   error: unknown,
+  visionDebug?: TaskVisionDebugInfo | null,
 ): TaskErrorDebugInfo {
   const apiError = (error instanceof Error ? error : new Error(String(error))) as StoreApiError
   const localDebug = readLocalDebugFromErrorDetails(apiError.details)
   if (localDebug) {
-    return localDebug
+    return {
+      ...localDebug,
+      vision: visionDebug ?? localDebug.vision ?? null,
+    }
   }
 
   const debugInfo: TaskErrorDebugInfo = {
@@ -48,6 +52,7 @@ function buildTaskErrorDebugInfo(
     responsesTransport: requestSettings.responsesTransport || null,
     responsesImageInputMode: requestSettings.responsesImageInputMode || null,
     responsesPromptRevisionMode: requestSettings.responsesPromptRevisionMode || null,
+    vision: visionDebug ?? null,
   }
 
   if (apiError.details !== undefined) {
@@ -74,6 +79,7 @@ export async function executeTask(taskId: string, requestSettings: AppSettings) 
   }
 
   const outputIds: string[] = []
+  let visionDebug: TaskVisionDebugInfo | null = null
 
   try {
     throwIfTaskAbortRequested(taskId)
@@ -99,6 +105,9 @@ export async function executeTask(taskId: string, requestSettings: AppSettings) 
     throwIfTaskAbortRequested(taskId)
     const result = await callTaskImageApi(task, requestSettings, {
       onFinalImages: appendOutputImages,
+      onVisionDebug: (info) => {
+        visionDebug = info
+      },
       registerAbort: (abort) => {
         registerTaskAborter(taskId, abort)
       },
@@ -129,7 +138,7 @@ export async function executeTask(taskId: string, requestSettings: AppSettings) 
     failTaskRun(taskId, {
       outputImageIds: outputIds,
       errorMessage: error instanceof Error ? error.message : String(error),
-      errorDebug: buildTaskErrorDebugInfo(requestSettings, error),
+      errorDebug: buildTaskErrorDebugInfo(requestSettings, error, visionDebug),
     })
     useStore.getState().setDetailTaskId(taskId)
   } finally {

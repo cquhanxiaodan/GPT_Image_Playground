@@ -1,8 +1,9 @@
 import { callImageApi } from '../lib/api'
 import type { ApiInputImage, ApiImageAsset, CallApiResult } from '../lib/api'
 import { describeImagesWithVision } from '../lib/api/visionToPrompt'
+import { createAbortError, getAbortSignalMessage } from '../lib/api/abort'
 import { PROMPT_HARD_LIMIT } from '../lib/prompt'
-import type { AppSettings, TaskRecord } from '../types'
+import type { AppSettings, TaskRecord, TaskVisionDebugInfo } from '../types'
 import { getImageView } from './imageAssets'
 
 export type TaskApiOutputImageAsset = ApiImageAsset
@@ -12,10 +13,36 @@ export interface TaskApiRequestHandlers {
   registerAbort?: (abort: () => void) => void
   throwIfAborted?: () => void
   onStatusMessage?: (message: string) => void
+  onVisionDebug?: (info: TaskVisionDebugInfo) => void
 }
 
-const ENHANCED_PROMPT_LIMIT = 1600
+const ENHANCED_PROMPT_LIMIT = 1200
 const BASE_PROMPT_LIMIT = PROMPT_HARD_LIMIT
+
+function createVisionAbortController(
+  settings: AppSettings,
+  registerAbort?: (abort: () => void) => void,
+): { controller: AbortController; cleanup: () => void } {
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort('timeout'), settings.timeout * 1000)
+
+  registerAbort?.(() => controller.abort('user'))
+
+  return {
+    controller,
+    cleanup: () => {
+      clearTimeout(timeoutId)
+    },
+  }
+}
+
+function normalizeVisionError(error: unknown, signal: AbortSignal): never {
+  if (signal.aborted) {
+    throw createAbortError(getAbortSignalMessage(signal))
+  }
+
+  throw error
+}
 
 function truncateText(text: string, maxChars: number): string {
   if (text.length <= maxChars) {
@@ -106,6 +133,8 @@ export async function callTaskImageApi(
 
   if (inputImages.length > 0 && !editMaskDataUrl) {
     handlers.onStatusMessage?.('正在用视觉模型识别参考图...')
+    const visionRuntime = createVisionAbortController(settings, handlers.registerAbort)
+
     try {
       const imageDataUrls = inputImages.map((img) => img.dataUrl)
       const imageDescriptions = await describeImagesWithVision(
@@ -113,10 +142,26 @@ export async function callTaskImageApi(
         settings.baseUrl,
         settings.apiKey,
         visionModel,
+        visionRuntime.controller.signal,
       )
       handlers.throwIfAborted?.()
 
+      const normalizedBasePrompt = task.prompt.trim()
+      const normalizedDescriptions = imageDescriptions.trim()
+      const rawEnhancedPrompt = normalizedBasePrompt
+        ? `${normalizedBasePrompt}\n\n参考图补充:\n${normalizedDescriptions}`
+        : `参考图补充:\n${normalizedDescriptions}`
       const enhancedPrompt = buildEnhancedPrompt(task.prompt, imageDescriptions)
+      handlers.onVisionDebug?.({
+        model: visionModel,
+        inputImageCount: inputImages.length,
+        basePromptLength: normalizedBasePrompt.length,
+        visionDescriptionLength: imageDescriptions.length,
+        enhancedPromptLength: enhancedPrompt.length,
+        enhancedPromptWasTruncated: enhancedPrompt !== rawEnhancedPrompt,
+        visionDescription: imageDescriptions,
+        enhancedPrompt,
+      })
 
       return callImageApi({
         settings,
@@ -128,8 +173,19 @@ export async function callTaskImageApi(
         registerAbort: handlers.registerAbort,
       })
     } catch (visionError) {
-      handlers.throwIfAborted?.()
+      normalizeVisionError(visionError, visionRuntime.controller.signal)
       handlers.onStatusMessage?.('视觉模型识别失败，尝试直接提交...')
+      return callImageApi({
+        settings,
+        prompt: task.prompt,
+        params: task.params,
+        inputImages: [],
+        editMask: null,
+        onFinalImages: handlers.onFinalImages,
+        registerAbort: handlers.registerAbort,
+      })
+    } finally {
+      visionRuntime.cleanup()
     }
   }
 

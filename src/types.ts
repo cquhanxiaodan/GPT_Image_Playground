@@ -229,6 +229,17 @@ export interface TaskErrorDebugFailure {
   details?: unknown
 }
 
+export interface TaskVisionDebugInfo {
+  model: string
+  inputImageCount: number
+  basePromptLength: number
+  visionDescriptionLength: number
+  enhancedPromptLength: number
+  enhancedPromptWasTruncated: boolean
+  visionDescription: string
+  enhancedPrompt: string
+}
+
 export interface TaskErrorDebugInfo {
   createdAt?: number
   requestId?: string | null
@@ -244,6 +255,7 @@ export interface TaskErrorDebugInfo {
   request?: TaskErrorDebugRequestSnapshot | null
   requestLog?: TaskErrorDebugRequestLogEntry[] | null
   failure?: TaskErrorDebugFailure | null
+  vision?: TaskVisionDebugInfo | null
   details?: unknown
 }
 
