@@ -8,11 +8,11 @@ export default function Header() {
 
   return (
     <header className="sticky top-0 z-40 bg-white/80 dark:bg-gray-950/80 backdrop-blur border-b border-gray-200 dark:border-white/[0.08]">
-      <div className="mx-auto flex h-12 max-w-7xl items-center justify-between gap-3 px-4">
-        <h1 className="min-w-0 flex-1 truncate text-[15px] font-bold tracking-tight text-gray-800 dark:text-gray-100 sm:text-base">
+      <div className="mx-auto flex h-12 max-w-7xl items-center gap-3 px-4">
+        <h1 className="min-w-0 shrink-0 pr-2 text-[15px] font-bold tracking-tight text-gray-800 dark:text-gray-100 sm:text-base md:w-56">
           GPT Image Playground
         </h1>
-        <div className="flex flex-shrink-0 items-center gap-1.5">
+        <div className="flex min-w-0 flex-1 items-center justify-center gap-1.5 sm:gap-2">
           <div className="hidden rounded-full border border-gray-200/80 bg-white/90 p-0.5 shadow-sm dark:border-white/[0.08] dark:bg-gray-900/90 sm:inline-flex">
             <button
               type="button"
@@ -102,6 +102,7 @@ export default function Header() {
             </svg>
           </button>
         </div>
+        <div className="hidden md:block md:w-56" aria-hidden="true" />
       </div>
     </header>
   )
