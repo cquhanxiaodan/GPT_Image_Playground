@@ -193,6 +193,29 @@ export default function DetailModal() {
     confirmGalleryPurgeTask(task)
   }
 
+  const copyText = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      return true
+    } catch {
+      const textarea = document.createElement('textarea')
+      textarea.value = text
+      textarea.setAttribute('readonly', 'true')
+      textarea.style.position = 'fixed'
+      textarea.style.opacity = '0'
+      textarea.style.pointerEvents = 'none'
+      document.body.appendChild(textarea)
+      textarea.focus()
+      textarea.select()
+
+      try {
+        return document.execCommand('copy')
+      } finally {
+        document.body.removeChild(textarea)
+      }
+    }
+  }
+
   const handleCopyError = async () => {
     const errorPayload = {
       copiedAt: new Date().toISOString(),
@@ -225,7 +248,10 @@ export default function DetailModal() {
     }
 
     try {
-      await navigator.clipboard.writeText(JSON.stringify(errorPayload, null, 2))
+      const copied = await copyText(JSON.stringify(errorPayload, null, 2))
+      if (!copied) {
+        throw new Error('copy failed')
+      }
       showToast(task.errorDebug ? '完整报错已复制' : '已复制可用报错信息', 'success')
     } catch {
       showToast('复制报错失败', 'error')
@@ -236,7 +262,10 @@ export default function DetailModal() {
     if (!task.prompt) return
 
     try {
-      await navigator.clipboard.writeText(task.prompt)
+      const copied = await copyText(task.prompt)
+      if (!copied) {
+        throw new Error('copy failed')
+      }
       showToast('提示词已复制', 'success')
     } catch {
       showToast('复制提示词失败', 'error')

@@ -4,6 +4,7 @@ export interface DevProxyConfig {
   target: string
   changeOrigin: boolean
   secure: boolean
+  forwardTargetHeader?: boolean
 }
 
 export const DEV_PROXY_REQUEST_ID_HEADER = 'x-dev-proxy-request-id'
@@ -88,6 +89,7 @@ export function normalizeDevProxyConfig(input: unknown): DevProxyConfig | null {
     target: target || '',
     changeOrigin: record.changeOrigin !== false,
     secure: Boolean(record.secure),
+    forwardTargetHeader: record.forwardTargetHeader !== false,
   }
 }
 
@@ -121,5 +123,12 @@ export function readClientDevProxyConfig(): DevProxyConfig | null {
     )
   }
 
-  return { enabled: true, prefix: '/api-proxy', target: '', changeOrigin: true, secure: true }
+  return {
+    enabled: true,
+    prefix: '/api-proxy',
+    target: '',
+    changeOrigin: true,
+    secure: true,
+    forwardTargetHeader: false,
+  }
 }

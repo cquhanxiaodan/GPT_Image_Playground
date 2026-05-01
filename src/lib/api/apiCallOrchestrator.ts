@@ -73,7 +73,7 @@ function createApiCallRuntime(intent: CallImageApiIntent): ApiCallRuntime {
 async function prepareApiCallRuntime(runtime: ApiCallRuntime): Promise<void> {
   const { baseOpts, ctx } = runtime
 
-  if (ctx.forceProxy) {
+  if (ctx.forceProxy && ctx.proxyConfig?.forwardTargetHeader !== false) {
     const proxyTargetBaseUrl = normalizeProxyTargetBaseUrl(baseOpts.settings.baseUrl)
     if (!proxyTargetBaseUrl) {
       throw createApiError('API URL 无效，请检查设置中的 API URL')

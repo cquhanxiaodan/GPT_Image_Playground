@@ -16,7 +16,7 @@ export async function fetchModels(
     Authorization: `Bearer ${apiKey}`,
   }
 
-  if (proxyConfig?.enabled) {
+  if (proxyConfig?.enabled && proxyConfig.forwardTargetHeader !== false) {
     const proxyTarget = normalizeProxyTargetBaseUrl(baseUrl)
     if (proxyTarget) {
       headers['X-Dev-Proxy-Target'] = proxyTarget
