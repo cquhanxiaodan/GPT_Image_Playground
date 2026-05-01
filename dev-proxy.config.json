@@ -1,0 +1,7 @@
+{
+  "enabled": true,
+  "prefix": "/api-proxy",
+  "target": "",
+  "changeOrigin": true,
+  "secure": false
+}
