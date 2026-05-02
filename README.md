@@ -199,6 +199,7 @@ workers/square-api
 - 支持静态部署。
 - 提供 `deploy/` 下的 Docker 与 Nginx 相关文件，以及本地生产预览脚本。
 - 提供 `manifest.webmanifest` 与 `sw.js`，具备基础 PWA 能力。
+- 生产环境若使用同源 `/api-proxy` 反代到本机 `sub2api`，前端会继续请求同源路径，但不会再发送 `X-Dev-Proxy-Target`，避免本机网关把请求转回自己的公网入口域名形成代理回环。
 
 ## 技术栈
 
@@ -293,6 +294,13 @@ npm run preview
 - 推送符合 `v*` 规则的标签后，会自动执行 `npm ci`、`npm run build` 并发布到 GitHub Pages。
 - GitHub Pages、`vite preview`、静态托管等环境都只能使用 `direct`，并且要求上游接口支持浏览器直连（`HTTPS`、`CORS`、预检）。
 - `deploy/` 目录中的 Docker / Nginx 模板仍保留，可作为自托管部署参考。
+
+当前推荐的自托管生产部署方式是：
+
+- 浏览器只访问站点同源的 `/api-proxy/`。
+- 容器内 Nginx 通过 `LOCAL_API_PROXY_TARGET` 把 `/api-proxy/` 转发到宿主机 `sub2api:8080`。
+- 本机 `sub2api` 直接作为最终 OpenAI 兼容网关处理 `/v1/chat/completions`、`/v1/images/generations` 等请求。
+- 生产环境不再把前端设置里的 `API_URL` 转成 `X-Dev-Proxy-Target` 发给本机 `sub2api`，从而避免请求再绕回自己的公网入口域名，降低 `524`、`context canceled` 与代理回环问题。
 
 ### 5. 广场 Worker 常用操作
 

@@ -6,6 +6,7 @@ import DetailInputImagesSection from './DetailInputImagesSection'
 import DetailParamsSection from './DetailParamsSection'
 import DetailPromptSection from './DetailPromptSection'
 import DetailTaskMeta from './DetailTaskMeta'
+import DetailVisionDebugSection from './DetailVisionDebugSection'
 
 interface DetailInfoPanelProps {
   task: TaskRecord
@@ -102,6 +103,8 @@ export default function DetailInfoPanel({
         />
 
         <DetailPromptSection taskKind={taskKind} prompt={task.prompt} revisedPrompt={revisedPrompt} />
+
+        <DetailVisionDebugSection vision={task.errorDebug?.vision} />
 
         <DetailInputImagesSection
           imageIds={task.inputImageIds ?? []}
