@@ -140,7 +140,7 @@ export const UNCATEGORIZED_CATEGORY_FILTER = '__uncategorized__'
 export { DEFAULT_PARAMS, UNCATEGORIZED_CATEGORY_NAME, UNKNOWN_TASK_PROVIDER_NAME }
 
 const DEFAULT_BASE_URL = import.meta.env.VITE_DEFAULT_API_URL?.trim() || 'https://api.openai.com'
-const DEFAULT_REQUEST_MODE: RequestMode = 'direct'
+const DEFAULT_REQUEST_MODE: RequestMode = import.meta.env.DEV ? 'direct' : 'local_proxy'
 
 export const DEFAULT_SETTINGS: AppSettings = {
   baseUrl: DEFAULT_BASE_URL,

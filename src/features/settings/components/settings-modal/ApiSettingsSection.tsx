@@ -79,7 +79,11 @@ export default function ApiSettingsSection({
           commitSettings={commitSettings}
         />
 
-        <ApiRequestSettings />
+        <ApiRequestSettings
+          draft={draft}
+          setDraft={setDraft}
+          commitSettings={commitSettings}
+        />
 
         <ApiModelSettings
           draft={draft}
