@@ -2,7 +2,7 @@ import { buildRequestUrl } from './config'
 import { createApiError, dataUrlToBlob, isDataUrl, isHttpUrl } from './imageTransforms'
 import type { CallApiOptions, ImagesRequestPlan, SharedRequestContext } from './types'
 
-interface BuildImagesRequestSpecOptions {
+export interface BuildImagesRequestSpecOptions {
   opts: Pick<CallApiOptions, 'settings' | 'prompt' | 'params' | 'inputImageDataUrls' | 'editMaskDataUrl'>
   plan: ImagesRequestPlan
   ctx: SharedRequestContext

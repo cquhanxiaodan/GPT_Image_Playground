@@ -27,7 +27,7 @@ export default function ApiModelSettings({
     setLoadingModels(true)
     setModelsError('')
     try {
-      const allModels = await fetchModels(draft.baseUrl, draft.apiKey)
+      const allModels = await fetchModels(draft.baseUrl, draft.apiKey, draft.requestMode === 'local_proxy')
       const filtered = allModels.filter(
         (m) => !m.id.toLowerCase().includes('image') && !m.id.toLowerCase().includes('dall-e') && !m.id.toLowerCase().includes('tts') && !m.id.toLowerCase().includes('whisper') && !m.id.toLowerCase().includes('embedding'),
       )
@@ -41,7 +41,7 @@ export default function ApiModelSettings({
     } finally {
       setLoadingModels(false)
     }
-  }, [draft.baseUrl, draft.apiKey])
+  }, [draft.baseUrl, draft.apiKey, draft.requestMode])
 
   useEffect(() => {
     if (draft.baseUrl && draft.apiKey && chatModels.length === 0 && !loadingModels) {
@@ -65,7 +65,7 @@ export default function ApiModelSettings({
 
       <label className="block">
         <div className="mb-1 flex items-center justify-between">
-          <span className="text-xs text-gray-500 dark:text-gray-400">视觉模型（参考图转提示词）</span>
+          <span className="text-xs text-gray-500 dark:text-gray-400">视觉模型（兼容旧流程）</span>
           <button
             type="button"
             onClick={loadModels}
@@ -100,7 +100,7 @@ export default function ApiModelSettings({
           <div className="mt-1 text-[10px] text-amber-500 dark:text-amber-400">{modelsError}</div>
         )}
         <div className="mt-1 text-[10px] text-gray-400 dark:text-gray-500">
-          添加参考图时，用此模型识别图片内容并转为提示词。留空则使用 gpt-5.4。
+          当前图生图会直接提交参考图；此模型仅用于兼容旧的参考图转提示词流程。
         </div>
       </label>
     </>

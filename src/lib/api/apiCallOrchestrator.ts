@@ -46,7 +46,7 @@ function buildCallApiOptions(intent: CallImageApiIntent): CallApiOptions {
 function createApiCallRuntime(intent: CallImageApiIntent): ApiCallRuntime {
   const baseOpts = buildCallApiOptions(intent)
   const mime = MIME_MAP[baseOpts.params.output_format] || 'image/png'
-  const proxyConfig = readClientDevProxyConfig()
+  const proxyConfig = baseOpts.settings.requestMode === 'local_proxy' ? readClientDevProxyConfig() : null
   const debugLog: ApiDebugRequestLogEntry[] = []
   const requestHeaders: Record<string, string> = {
     Authorization: `Bearer ${baseOpts.settings.apiKey}`,

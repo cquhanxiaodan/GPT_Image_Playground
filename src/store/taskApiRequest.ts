@@ -1,8 +1,5 @@
 import { callImageApi } from '../lib/api'
 import type { ApiInputImage, ApiImageAsset, CallApiResult } from '../lib/api'
-import { describeImagesWithVision } from '../lib/api/visionToPrompt'
-import { createAbortError, getAbortSignalMessage } from '../lib/api/abort'
-import { PROMPT_HARD_LIMIT } from '../lib/prompt'
 import type { AppSettings, TaskRecord, TaskVisionDebugInfo } from '../types'
 import { getImageView } from './imageAssets'
 
@@ -14,66 +11,6 @@ export interface TaskApiRequestHandlers {
   throwIfAborted?: () => void
   onStatusMessage?: (message: string) => void
   onVisionDebug?: (info: TaskVisionDebugInfo) => void
-}
-
-const ENHANCED_PROMPT_LIMIT = 1200
-const BASE_PROMPT_LIMIT = PROMPT_HARD_LIMIT
-
-function createVisionAbortController(
-  settings: AppSettings,
-  registerAbort?: (abort: () => void) => void,
-): { controller: AbortController; cleanup: () => void } {
-  const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort('timeout'), settings.timeout * 1000)
-
-  registerAbort?.(() => controller.abort('user'))
-
-  return {
-    controller,
-    cleanup: () => {
-      clearTimeout(timeoutId)
-    },
-  }
-}
-
-function normalizeVisionError(error: unknown, signal: AbortSignal): never {
-  if (signal.aborted) {
-    throw createAbortError(getAbortSignalMessage(signal))
-  }
-
-  throw error
-}
-
-function truncateText(text: string, maxChars: number): string {
-  if (text.length <= maxChars) {
-    return text
-  }
-
-  return `${text.slice(0, Math.max(0, maxChars - 1)).trimEnd()}…`
-}
-
-function buildEnhancedPrompt(prompt: string, imageDescriptions: string): string {
-  const basePrompt = prompt.trim()
-  const descriptions = imageDescriptions.trim()
-  if (!descriptions) {
-    return basePrompt
-  }
-
-  const nextPrompt = basePrompt
-    ? `${basePrompt}\n\n参考图补充:\n${descriptions}`
-    : `参考图补充:\n${descriptions}`
-
-  if (nextPrompt.length <= ENHANCED_PROMPT_LIMIT) {
-    return nextPrompt
-  }
-
-  const trimmedBasePrompt = truncateText(basePrompt, BASE_PROMPT_LIMIT)
-  const descriptionBudget = Math.max(120, ENHANCED_PROMPT_LIMIT - trimmedBasePrompt.length - 16)
-  const trimmedDescriptions = truncateText(descriptions, descriptionBudget)
-
-  return trimmedBasePrompt
-    ? `${trimmedBasePrompt}\n\n参考图补充:\n${trimmedDescriptions}`
-    : `参考图补充:\n${trimmedDescriptions}`
 }
 
 async function loadTaskInputImages(
@@ -128,66 +65,6 @@ export async function callTaskImageApi(
   )
   const editMaskDataUrl = await loadTaskEditMaskDataUrl(task, handlers.throwIfAborted)
   handlers.throwIfAborted?.()
-
-  const visionModel = settings.visionModel?.trim() || 'gpt-5.4'
-
-  if (inputImages.length > 0 && !editMaskDataUrl) {
-    handlers.onStatusMessage?.('正在用视觉模型识别参考图...')
-    const visionRuntime = createVisionAbortController(settings, handlers.registerAbort)
-
-    try {
-      const imageDataUrls = inputImages.map((img) => img.dataUrl)
-      const imageDescriptions = await describeImagesWithVision(
-        imageDataUrls,
-        settings.baseUrl,
-        settings.apiKey,
-        visionModel,
-        visionRuntime.controller.signal,
-      )
-      handlers.throwIfAborted?.()
-
-      const normalizedBasePrompt = task.prompt.trim()
-      const normalizedDescriptions = imageDescriptions.trim()
-      const rawEnhancedPrompt = normalizedBasePrompt
-        ? `${normalizedBasePrompt}\n\n参考图补充:\n${normalizedDescriptions}`
-        : `参考图补充:\n${normalizedDescriptions}`
-      const enhancedPrompt = buildEnhancedPrompt(task.prompt, imageDescriptions)
-      handlers.onVisionDebug?.({
-        model: visionModel,
-        inputImageCount: inputImages.length,
-        basePromptLength: normalizedBasePrompt.length,
-        visionDescriptionLength: imageDescriptions.length,
-        enhancedPromptLength: enhancedPrompt.length,
-        enhancedPromptWasTruncated: enhancedPrompt !== rawEnhancedPrompt,
-        visionDescription: imageDescriptions,
-        enhancedPrompt,
-      })
-
-      return callImageApi({
-        settings,
-        prompt: enhancedPrompt,
-        params: task.params,
-        inputImages: [],
-        editMask: null,
-        onFinalImages: handlers.onFinalImages,
-        registerAbort: handlers.registerAbort,
-      })
-    } catch (visionError) {
-      normalizeVisionError(visionError, visionRuntime.controller.signal)
-      handlers.onStatusMessage?.('视觉模型识别失败，尝试直接提交...')
-      return callImageApi({
-        settings,
-        prompt: task.prompt,
-        params: task.params,
-        inputImages: [],
-        editMask: null,
-        onFinalImages: handlers.onFinalImages,
-        registerAbort: handlers.registerAbort,
-      })
-    } finally {
-      visionRuntime.cleanup()
-    }
-  }
 
   return callImageApi({
     settings,

@@ -8,8 +8,9 @@ export interface ModelInfo {
 export async function fetchModels(
   baseUrl: string,
   apiKey: string,
+  useProxy = false,
 ): Promise<ModelInfo[]> {
-  const proxyConfig = readClientDevProxyConfig()
+  const proxyConfig = useProxy ? readClientDevProxyConfig() : null
   const requestUrl = buildApiUrl(baseUrl, 'models', proxyConfig)
 
   const headers: Record<string, string> = {
