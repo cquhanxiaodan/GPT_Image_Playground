@@ -8,6 +8,8 @@ import {
   isTaskInRecycleBin,
   openGalleryTaskDetail,
   openLightbox,
+  getTaskProxyCacheDownloadUrl,
+  findRecoverableProxyRequestId,
   resolveTaskAppliedImageParam,
   resolveTaskCategoryName,
   resolveTaskDisplayImageParam,
@@ -19,6 +21,7 @@ import {
   resolveTaskTransportMeta,
   runGalleryEditOutputs,
   recoverTaskFromProxyCache,
+  recoverTaskFromProxyCacheJson,
   useStore,
 } from '../../../../store'
 import { useCloseOnEscape } from '../../../../hooks/useCloseOnEscape'
@@ -38,6 +41,7 @@ export default function DetailModal() {
   const setDetailTaskId = useStore((state) => state.setDetailTaskId)
   const setShareToSquareTarget = useStore((state) => state.setShareToSquareTarget)
   const showToast = useStore((state) => state.showToast)
+  const proxyCacheInputRef = useRef<HTMLInputElement>(null)
   const [lineageRootTaskId, setLineageRootTaskId] = useState<string | null>(null)
   const previousDetailTaskIdRef = useRef<string | null>(null)
 
@@ -180,6 +184,41 @@ export default function DetailModal() {
     }
   }
 
+  const handleDownloadProxyCache = () => {
+    const url = getTaskProxyCacheDownloadUrl(task)
+    const requestId = findRecoverableProxyRequestId(task)
+    if (!url || !requestId) {
+      showToast('未找到可下载的代理缓存', 'error')
+      return
+    }
+
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `${requestId}.json`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
+  const handleImportProxyCache = () => {
+    proxyCacheInputRef.current?.click()
+  }
+
+  const handleProxyCacheFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) {
+      return
+    }
+
+    try {
+      const recoveredCount = await recoverTaskFromProxyCacheJson(task, file)
+      showToast(`已从缓存文件恢复 ${recoveredCount} 张图片`, 'success')
+    } catch (error) {
+      showToast(`导入恢复失败：${error instanceof Error ? error.message : String(error)}`, 'error')
+    }
+  }
+
   const handleShare = () => {
     setShareToSquareTarget({ kind: 'task', taskId: task.id })
   }
@@ -305,6 +344,15 @@ export default function DetailModal() {
         }`}
         onClick={(event) => event.stopPropagation()}
       >
+        <input
+          ref={proxyCacheInputRef}
+          type="file"
+          accept="application/json,.json"
+          className="hidden"
+          onChange={(event) => {
+            void handleProxyCacheFileChange(event)
+          }}
+        />
         <div className="flex h-14 items-center justify-end px-4 md:hidden">
           <button
             type="button"
@@ -376,6 +424,8 @@ export default function DetailModal() {
             onRecover={() => {
               void handleRecover()
             }}
+            onDownloadProxyCache={handleDownloadProxyCache}
+            onImportProxyCache={handleImportProxyCache}
             onShare={handleShare}
             onDelete={handleDelete}
             onRestore={handleRestore}

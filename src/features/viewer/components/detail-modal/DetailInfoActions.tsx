@@ -9,6 +9,8 @@ interface DetailInfoActionsProps {
   onEdit: () => void
   onRetry: () => void
   onRecover: () => void
+  onDownloadProxyCache: () => void
+  onImportProxyCache: () => void
   onShare: () => void
   onDelete: () => void
   onRestore: () => void
@@ -24,6 +26,8 @@ export default function DetailInfoActions(props: DetailInfoActionsProps) {
     onEdit,
     onRetry,
     onRecover,
+    onDownloadProxyCache,
+    onImportProxyCache,
     onShare,
     onDelete,
     onRestore,
@@ -106,17 +110,35 @@ export default function DetailInfoActions(props: DetailInfoActionsProps) {
             </button>
           )}
           {canRecover && (
+            <>
+              <button
+                type="button"
+                onClick={onRecover}
+                className="flex-1 whitespace-nowrap rounded-lg bg-emerald-50 px-2 py-2 text-xs font-medium text-emerald-600 transition hover:bg-emerald-100 sm:px-3 sm:text-sm dark:bg-emerald-500/10 dark:text-emerald-300 dark:hover:bg-emerald-500/20"
+              >
+                <span className="flex items-center justify-center gap-1.5">
+                  <svg className="h-4 w-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v6h6M20 20v-6h-6M5 19A9 9 0 0 0 19 5" />
+                  </svg>
+                  恢复结果
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={onDownloadProxyCache}
+                className="flex-1 whitespace-nowrap rounded-lg bg-sky-50 px-2 py-2 text-xs font-medium text-sky-600 transition hover:bg-sky-100 sm:px-3 sm:text-sm dark:bg-sky-500/10 dark:text-sky-300 dark:hover:bg-sky-500/20"
+              >
+                下载缓存
+              </button>
+            </>
+          )}
+          {task.status !== 'done' && (
             <button
               type="button"
-              onClick={onRecover}
-              className="flex-1 whitespace-nowrap rounded-lg bg-emerald-50 px-2 py-2 text-xs font-medium text-emerald-600 transition hover:bg-emerald-100 sm:px-3 sm:text-sm dark:bg-emerald-500/10 dark:text-emerald-300 dark:hover:bg-emerald-500/20"
+              onClick={onImportProxyCache}
+              className="flex-1 whitespace-nowrap rounded-lg bg-gray-100 px-2 py-2 text-xs font-medium text-gray-600 transition hover:bg-gray-200 sm:px-3 sm:text-sm dark:bg-white/[0.06] dark:text-gray-300 dark:hover:bg-white/[0.1]"
             >
-              <span className="flex items-center justify-center gap-1.5">
-                <svg className="h-4 w-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v6h6M20 20v-6h-6M5 19A9 9 0 0 0 19 5" />
-                </svg>
-                恢复结果
-              </span>
+              导入缓存恢复
             </button>
           )}
           {canShare && (

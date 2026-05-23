@@ -41,6 +41,8 @@ interface DetailInfoPanelProps {
   onEdit: () => void
   onRetry: () => void
   onRecover: () => void
+  onDownloadProxyCache: () => void
+  onImportProxyCache: () => void
   onShare: () => void
   onDelete: () => void
   onRestore: () => void
@@ -80,6 +82,8 @@ export default function DetailInfoPanel({
   onEdit,
   onRetry,
   onRecover,
+  onDownloadProxyCache,
+  onImportProxyCache,
   onShare,
   onDelete,
   onRestore,
@@ -151,6 +155,8 @@ export default function DetailInfoPanel({
         onEdit={onEdit}
         onRetry={onRetry}
         onRecover={onRecover}
+        onDownloadProxyCache={onDownloadProxyCache}
+        onImportProxyCache={onImportProxyCache}
         onShare={onShare}
         onDelete={onDelete}
         onRestore={onRestore}

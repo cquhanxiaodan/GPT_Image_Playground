@@ -6,7 +6,7 @@ export { applyImageEditToInput, clearInputImageEdit, closeImageEditor, editOutpu
 export { closeLightbox, openLightbox } from './lightboxWorkflow'
 export { createSingleImageTasksFromFiles } from './imageTaskActions'
 export { abortTask, cleanupExpiredRecycleBinTasks, initStore, retryTask, startRecycleBinJanitor, submitTask } from './runtime'
-export { canRecoverTaskFromProxyCache, recoverTaskFromProxyCache } from './taskRecovery'
+export { canRecoverTaskFromProxyCache, findRecoverableProxyRequestId, getTaskProxyCacheDownloadUrl, recoverTaskFromProxyCache, recoverTaskFromProxyCacheJson } from './taskRecovery'
 export { DEFAULT_PARAMS, resolveTaskParamSizeOrDefault } from './taskParams'
 export { canEditTaskOutputs, canRetryTask, isTaskInRecycleBin, isTaskRunExceptional, resolveTaskAppliedImageParam, resolveTaskCategoryName, resolveTaskDisplayImageParam, resolveTaskImageProgress, resolveTaskKind, resolveTaskProviderName, resolveTaskRunOutcome, resolveTaskStatusLabel, resolveTaskTransportLabel, resolveTaskTransportMeta } from './taskRecords'
 export { useStore } from './state'

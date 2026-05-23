@@ -3,11 +3,20 @@ import {
   parseImagesFromPayload,
   readImagesPayload,
 } from '../lib/api'
+import { buildDevProxyResponseCacheUrl } from '../lib/devProxy'
 import type { TaskRecord } from '../types'
 import { storeImage } from './imageAssets'
 import { updateTaskInStore } from './taskStoreUtils'
 
-function findRecoverableProxyRequestId(task: TaskRecord): string | null {
+interface ProxyCacheJsonPayload {
+  requestId?: string
+  status?: number
+  statusText?: string
+  headers?: Record<string, string>
+  bodyBase64?: string
+}
+
+export function findRecoverableProxyRequestId(task: TaskRecord): string | null {
   const entries = task.errorDebug?.requestLog ?? []
   for (let index = entries.length - 1; index >= 0; index -= 1) {
     const entry = entries[index]
@@ -27,14 +36,53 @@ export function canRecoverTaskFromProxyCache(task: TaskRecord): boolean {
   return task.status !== 'done' && findRecoverableProxyRequestId(task) !== null
 }
 
-export async function recoverTaskFromProxyCache(task: TaskRecord): Promise<number> {
+export function getTaskProxyCacheDownloadUrl(task: TaskRecord): string | null {
   const requestId = findRecoverableProxyRequestId(task)
-  if (!requestId) {
-    throw new Error('未找到可恢复的代理响应缓存 ID')
+  return requestId ? buildDevProxyResponseCacheUrl(requestId) : null
+}
+
+function buildHeaders(input: ProxyCacheJsonPayload['headers']): Headers {
+  const headers = new Headers()
+  if (!input) {
+    return headers
   }
 
+  for (const [name, value] of Object.entries(input)) {
+    if (typeof value === 'string') {
+      headers.set(name, value)
+    }
+  }
+  return headers
+}
+
+function base64ToArrayBuffer(base64: string): ArrayBuffer {
+  const binary = atob(base64)
+  const bytes = new Uint8Array(binary.length)
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index)
+  }
+  return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer
+}
+
+function buildResponseFromCacheJson(payload: ProxyCacheJsonPayload): Response {
+  if (typeof payload.bodyBase64 !== 'string') {
+    throw new Error('代理缓存 JSON 缺少 bodyBase64')
+  }
+
+  const headers = buildHeaders(payload.headers)
+  if (payload.requestId) {
+    headers.set('x-dev-proxy-request-id', payload.requestId)
+  }
+
+  return new Response(base64ToArrayBuffer(payload.bodyBase64), {
+    status: payload.status ?? 200,
+    statusText: payload.statusText ?? 'OK',
+    headers,
+  })
+}
+
+async function recoverTaskFromResponse(task: TaskRecord, response: Response): Promise<number> {
   const controller = new AbortController()
-  const response = await fetchCachedProxyResponse(requestId, controller.signal)
   const payload = await readImagesPayload(response)
   const images = await parseImagesFromPayload(
     payload,
@@ -67,4 +115,20 @@ export async function recoverTaskFromProxyCache(task: TaskRecord): Promise<numbe
   })
 
   return outputImageIds.length
+}
+
+export async function recoverTaskFromProxyCache(task: TaskRecord): Promise<number> {
+  const requestId = findRecoverableProxyRequestId(task)
+  if (!requestId) {
+    throw new Error('未找到可恢复的代理响应缓存 ID')
+  }
+
+  const controller = new AbortController()
+  const response = await fetchCachedProxyResponse(requestId, controller.signal)
+  return recoverTaskFromResponse(task, response)
+}
+
+export async function recoverTaskFromProxyCacheJson(task: TaskRecord, file: File): Promise<number> {
+  const payload = JSON.parse(await file.text()) as ProxyCacheJsonPayload
+  return recoverTaskFromResponse(task, buildResponseFromCacheJson(payload))
 }
