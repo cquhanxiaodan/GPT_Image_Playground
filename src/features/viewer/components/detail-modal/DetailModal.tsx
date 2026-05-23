@@ -18,6 +18,7 @@ import {
   resolveTaskTransportLabel,
   resolveTaskTransportMeta,
   runGalleryEditOutputs,
+  recoverTaskFromProxyCache,
   useStore,
 } from '../../../../store'
 import { useCloseOnEscape } from '../../../../hooks/useCloseOnEscape'
@@ -168,6 +169,15 @@ export default function DetailModal() {
 
   const handleRetry = () => {
     applyGalleryTaskDetailAction('retry', task)
+  }
+
+  const handleRecover = async () => {
+    try {
+      const recoveredCount = await recoverTaskFromProxyCache(task)
+      showToast(`已从代理缓存恢复 ${recoveredCount} 张图片`, 'success')
+    } catch (error) {
+      showToast(`恢复失败：${error instanceof Error ? error.message : String(error)}`, 'error')
+    }
   }
 
   const handleShare = () => {
@@ -363,6 +373,9 @@ export default function DetailModal() {
             onReuse={handleReuse}
             onEdit={handleEdit}
             onRetry={handleRetry}
+            onRecover={() => {
+              void handleRecover()
+            }}
             onShare={handleShare}
             onDelete={handleDelete}
             onRestore={handleRestore}

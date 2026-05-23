@@ -1,5 +1,5 @@
 import type { TaskRecord } from '../../../../types'
-import { canRetryTask, resolveTaskKind } from '../../../../store'
+import { canRecoverTaskFromProxyCache, canRetryTask, resolveTaskKind } from '../../../../store'
 
 interface DetailInfoActionsProps {
   task: TaskRecord
@@ -8,6 +8,7 @@ interface DetailInfoActionsProps {
   onReuse: () => void
   onEdit: () => void
   onRetry: () => void
+  onRecover: () => void
   onShare: () => void
   onDelete: () => void
   onRestore: () => void
@@ -15,8 +16,21 @@ interface DetailInfoActionsProps {
 }
 
 export default function DetailInfoActions(props: DetailInfoActionsProps) {
-  const { task, inRecycleBin, canEditOutputs, onReuse, onEdit, onRetry, onShare, onDelete, onRestore, onPurge } = props
+  const {
+    task,
+    inRecycleBin,
+    canEditOutputs,
+    onReuse,
+    onEdit,
+    onRetry,
+    onRecover,
+    onShare,
+    onDelete,
+    onRestore,
+    onPurge,
+  } = props
   const canRetry = canRetryTask(task)
+  const canRecover = canRecoverTaskFromProxyCache(task)
   const showEditAction = canEditOutputs
   const canShare = task.status === 'done' && resolveTaskKind(task) !== 'image'
 
@@ -88,6 +102,20 @@ export default function DetailInfoActions(props: DetailInfoActionsProps) {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m14.216 2A7.5 7.5 0 005.582 9m0 0H10m10 11v-5h-.581m0 0H14a7.5 7.5 0 01-13.418-2" />
                 </svg>
                 重试
+              </span>
+            </button>
+          )}
+          {canRecover && (
+            <button
+              type="button"
+              onClick={onRecover}
+              className="flex-1 whitespace-nowrap rounded-lg bg-emerald-50 px-2 py-2 text-xs font-medium text-emerald-600 transition hover:bg-emerald-100 sm:px-3 sm:text-sm dark:bg-emerald-500/10 dark:text-emerald-300 dark:hover:bg-emerald-500/20"
+            >
+              <span className="flex items-center justify-center gap-1.5">
+                <svg className="h-4 w-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v6h6M20 20v-6h-6M5 19A9 9 0 0 0 19 5" />
+                </svg>
+                恢复结果
               </span>
             </button>
           )}

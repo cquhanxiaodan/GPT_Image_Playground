@@ -1,4 +1,7 @@
 export { normalizeBaseUrl } from '../devProxy'
 export { callImageApi } from './apiCallOrchestrator'
 export { fetchModels } from './models'
+export { fetchCachedProxyResponse } from './proxyResponseRecovery'
+export { parseImagesFromPayload } from './imagePayload'
+export { readImagesPayload } from './payloadText'
 export type { ApiImageAsset, ApiInputImage, CallApiResult, CallImageApiIntent } from './types'

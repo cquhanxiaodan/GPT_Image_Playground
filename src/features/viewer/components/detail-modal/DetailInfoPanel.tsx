@@ -40,6 +40,7 @@ interface DetailInfoPanelProps {
   onReuse: () => void
   onEdit: () => void
   onRetry: () => void
+  onRecover: () => void
   onShare: () => void
   onDelete: () => void
   onRestore: () => void
@@ -78,6 +79,7 @@ export default function DetailInfoPanel({
   onReuse,
   onEdit,
   onRetry,
+  onRecover,
   onShare,
   onDelete,
   onRestore,
@@ -148,6 +150,7 @@ export default function DetailInfoPanel({
         onReuse={onReuse}
         onEdit={onEdit}
         onRetry={onRetry}
+        onRecover={onRecover}
         onShare={onShare}
         onDelete={onDelete}
         onRestore={onRestore}

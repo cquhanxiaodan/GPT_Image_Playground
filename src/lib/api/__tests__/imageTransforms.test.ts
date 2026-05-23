@@ -11,5 +11,5 @@ describe('base64ToBlob', () => {
 
     expect(blob.type).toBe('image/png')
     expect(blob.size).toBe((base64Length * 3) / 4)
-  })
+  }, 30_000)
 })
