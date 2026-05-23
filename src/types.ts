@@ -139,8 +139,8 @@ export const FAVORITES_CATEGORY_FILTER = '__favorites__'
 export const UNCATEGORIZED_CATEGORY_FILTER = '__uncategorized__'
 export { DEFAULT_PARAMS, UNCATEGORIZED_CATEGORY_NAME, UNKNOWN_TASK_PROVIDER_NAME }
 
-const DEFAULT_BASE_URL = import.meta.env.VITE_DEFAULT_API_URL?.trim() || 'https://api.openai.com'
-const DEFAULT_REQUEST_MODE: RequestMode = import.meta.env.DEV ? 'direct' : 'local_proxy'
+export const FIXED_API_BASE_URL = 'https://sub2api2.hxlsh.us.ci'
+const DEFAULT_BASE_URL = import.meta.env.VITE_DEFAULT_API_URL?.trim() || FIXED_API_BASE_URL
 
 export const DEFAULT_SETTINGS: AppSettings = {
   baseUrl: DEFAULT_BASE_URL,
@@ -153,7 +153,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   responsesPromptRevisionMode: 'allow',
   timeout: 900,
   apiProtocol: 'images',
-  requestMode: DEFAULT_REQUEST_MODE,
+  requestMode: 'local_proxy',
 }
 
 // ===== 任务参数 =====

@@ -18,7 +18,7 @@ function fakeSettings(overrides: Record<string, unknown> = {}) {
     responsesPromptRevisionMode: "allow",
     timeout: 900,
     apiProtocol: "responses",
-    requestMode: "direct",
+    requestMode: "local_proxy",
     ...overrides,
   } as any
 }

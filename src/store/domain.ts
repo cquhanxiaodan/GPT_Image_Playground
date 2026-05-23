@@ -39,7 +39,7 @@ function normalizeApiProtocol(value: unknown): ApiProtocol {
 }
 
 function normalizeRequestMode(value: unknown): AppSettings['requestMode'] {
-  return value === 'direct' || value === 'local_proxy' ? value : DEFAULT_SETTINGS.requestMode
+  return 'local_proxy'
 }
 
 export function getProviderSettings(provider: ProviderConfig): AppSettings {

@@ -6,7 +6,6 @@ import type {
 import ApiConnectionFields from './ApiConnectionFields'
 import ApiModelSettings from './ApiModelSettings'
 import ApiProviderFields from './ApiProviderFields'
-import ApiRequestSettings from './ApiRequestSettings'
 import ApiResponsesSettings from './ApiResponsesSettings'
 import ApiTimeoutField from './ApiTimeoutField'
 
@@ -76,12 +75,6 @@ export default function ApiSettingsSection({
           setDraft={setDraft}
           showApiKey={showApiKey}
           setShowApiKey={setShowApiKey}
-          commitSettings={commitSettings}
-        />
-
-        <ApiRequestSettings
-          draft={draft}
-          setDraft={setDraft}
           commitSettings={commitSettings}
         />
 

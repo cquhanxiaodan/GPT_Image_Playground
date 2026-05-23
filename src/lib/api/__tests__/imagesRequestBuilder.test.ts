@@ -17,7 +17,7 @@ function createOptions(
         responsesPromptRevisionMode: 'allow',
         timeout: 900,
         apiProtocol: 'images',
-        requestMode: 'direct',
+        requestMode: 'local_proxy',
       },
       prompt: 'make it cinematic',
       params: {

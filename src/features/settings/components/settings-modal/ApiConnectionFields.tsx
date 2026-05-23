@@ -1,5 +1,5 @@
 import type { Dispatch, SetStateAction } from 'react'
-import type { AppSettings } from '../../../../types'
+import { FIXED_API_BASE_URL, type AppSettings } from '../../../../types'
 import { fieldClassName } from './apiSettingsShared'
 
 interface ApiConnectionFieldsProps {
@@ -22,13 +22,14 @@ export default function ApiConnectionFields({
       <label className="block">
         <span className="mb-1 block text-xs text-gray-500 dark:text-gray-400">API URL</span>
         <input
-          value={draft.baseUrl}
-          onChange={(event) => setDraft((prev) => ({ ...prev, baseUrl: event.target.value }))}
-          onBlur={(event) => commitSettings({ ...draft, baseUrl: event.target.value })}
+          value={FIXED_API_BASE_URL}
+          readOnly
           type="text"
-          placeholder="https://api.openai.com/v1"
-          className={fieldClassName}
+          className={`${fieldClassName} cursor-not-allowed opacity-70`}
         />
+        <div className="mt-1 text-[10px] text-gray-400 dark:text-gray-500">
+          API 地址由部署服务统一配置，前端固定通过本地代理访问。
+        </div>
       </label>
 
       <div className="block">

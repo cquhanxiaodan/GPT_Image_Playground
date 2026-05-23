@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { normalizeBaseUrl } from '../../../../lib/devProxy'
 import { useStore, exportData, importData, clearAllData } from '../../../../store'
-import { DEFAULT_SETTINGS, type AppSettings } from '../../../../types'
+import { DEFAULT_SETTINGS, FIXED_API_BASE_URL, type AppSettings } from '../../../../types'
 import { useCloseOnEscape } from '../../../../hooks/useCloseOnEscape'
 import ApiSettingsSection from './ApiSettingsSection'
 import DataManagementSection from './DataManagementSection'
@@ -44,7 +44,7 @@ export default function SettingsModal() {
     (nextDraft: AppSettings) => {
       const normalizedDraft = {
         ...nextDraft,
-        baseUrl: normalizeBaseUrl(nextDraft.baseUrl.trim() || DEFAULT_SETTINGS.baseUrl),
+        baseUrl: normalizeBaseUrl(FIXED_API_BASE_URL),
         apiKey: nextDraft.apiKey,
         model: nextDraft.model.trim() || DEFAULT_SETTINGS.model,
         visionModel: nextDraft.visionModel?.trim() || DEFAULT_SETTINGS.visionModel,
@@ -57,7 +57,7 @@ export default function SettingsModal() {
           nextDraft.responsesPromptRevisionMode || DEFAULT_SETTINGS.responsesPromptRevisionMode,
         timeout: Number(nextDraft.timeout) || DEFAULT_SETTINGS.timeout,
         apiProtocol: nextDraft.apiProtocol || DEFAULT_SETTINGS.apiProtocol,
-        requestMode: nextDraft.requestMode || DEFAULT_SETTINGS.requestMode,
+        requestMode: 'local_proxy' as const,
       }
       setDraft(normalizedDraft)
       setSettings(normalizedDraft)
