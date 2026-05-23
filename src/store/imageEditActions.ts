@@ -3,6 +3,7 @@ import { writeImageEditDraft } from './taskDraft'
 import { getImageView } from './imageAssets'
 import { submitTask } from './runtime'
 import { useStore } from './state'
+import { PROMPT_HARD_LIMIT } from '../lib/prompt'
 
 export async function editOutputs(task: TaskRecord, preferredImageId?: string) {
   const { setImageEditSession, showToast } = useStore.getState()
@@ -135,7 +136,7 @@ export async function applyImageEditToInput(options: {
   setImageEditSession(null)
   showToast(
     draft.promptWasTruncated
-      ? '提示词过长，已自动截断到 1000 字并写入输入区'
+      ? `提示词过长，已自动截断到 ${PROMPT_HARD_LIMIT} 字并写入输入区`
       : options.submit
         ? options.maskDataUrl
           ? '已写入输入区，正在提交局部编辑任务'

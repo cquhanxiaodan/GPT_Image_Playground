@@ -18,7 +18,7 @@ import {
 } from '../types'
 import { findCategoryById, findProviderById, getProviderSettings } from './domain'
 import { resolveTaskParentFromInputImages } from './taskLineage'
-import { resolveTaskParamSizeOrDefault } from './taskParams'
+import { getChangedTaskParams, normalizeTaskParams } from './taskParams'
 import { createGenerationTaskRecord } from './taskRecords'
 
 export type PrepareTaskDraftFailureReason =
@@ -94,11 +94,7 @@ export function buildPreparedTaskDraft(
   snapshot: TaskDraftStoreSnapshot,
   stagedAssets: StagedTaskDraftAssets,
 ): PreparedTaskDraft {
-  const normalizedSize = resolveTaskParamSizeOrDefault(snapshot.params.size)
-  const normalizedParams = {
-    ...snapshot.params,
-    size: normalizedSize,
-  }
+  const normalizedParams = normalizeTaskParams(snapshot.params)
 
   const selectedProvider = findProviderById(snapshot.providers, snapshot.activeProviderId)
   const selectedCategory =
@@ -130,12 +126,7 @@ export function buildPreparedTaskDraft(
     }),
     requestSettings,
     promptWasTruncated: preparedPrompt.truncated,
-    normalizedParamsPatch:
-      normalizedSize !== snapshot.params.size
-        ? {
-            size: normalizedSize,
-          }
-        : undefined,
+    normalizedParamsPatch: getChangedTaskParams(snapshot.params, normalizedParams),
   }
 }
 

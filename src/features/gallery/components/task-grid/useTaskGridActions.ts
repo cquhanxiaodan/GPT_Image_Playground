@@ -11,7 +11,9 @@ import {
   runGalleryBatchFavorite,
   runGalleryBatchMoveToCategory,
   runGalleryMoveTaskToCategory,
+  useStore,
 } from '../../../../store'
+import { downloadImages } from '../../../../lib/downloadImages'
 import type { TaskRecord } from '../../../../types'
 import type { TaskContextMenuState } from './shared'
 
@@ -146,6 +148,21 @@ export function useTaskGridActions(options: UseTaskGridActionsOptions) {
     await runGalleryBatchFavorite(selectedTasks, !allSelectedFavorited)
   }, [allSelectedFavorited, selectedTasks])
 
+  const handleBatchDownload = useCallback(async () => {
+    const imageIds = selectedTasks.flatMap((task) => task.outputImages ?? [])
+    if (!imageIds.length) {
+      useStore.getState().showToast('所选任务没有可下载图片', 'error')
+      return
+    }
+
+    const result = await downloadImages(imageIds)
+    if (result.successCount > 0) {
+      useStore.getState().showToast(`开始下载 ${result.successCount} 张图片`, 'success')
+      return
+    }
+    useStore.getState().showToast('下载失败', 'error')
+  }, [selectedTasks])
+
   const handleTaskContextMenu = useCallback(
     (task: TaskRecord, event: ReactMouseEvent<HTMLDivElement>) => {
       event.preventDefault()
@@ -177,6 +194,7 @@ export function useTaskGridActions(options: UseTaskGridActionsOptions) {
     handleBatchRestore,
     handleBatchPurge,
     handleBatchMoveCategory,
+    handleBatchDownload,
     openMoveCategoryModal,
     handleSingleTaskMoveCategory,
     handleBatchFavorite,

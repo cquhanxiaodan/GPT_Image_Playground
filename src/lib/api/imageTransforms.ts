@@ -16,6 +16,8 @@ const RESPONSES_INLINE_IMAGE_TARGET_BYTES = 700 * 1024
 const RESPONSES_INLINE_IMAGE_TOTAL_TARGET_BYTES = 1500 * 1024
 const RESPONSES_INLINE_IMAGE_MIN_DIMENSION = 768
 const RESPONSES_INLINE_IMAGE_MIN_QUALITY = 0.55
+const EDIT_MASK_MAX_EDGE = 1920
+const EDIT_MASK_DIMENSION_MULTIPLE = 16
 const MASK_ALPHA_THRESHOLD = 8
 const IMAGE_SIGNATURE_PREVIEW_SIZE = 64
 
@@ -300,8 +302,9 @@ export async function normalizeEditMaskForProvider(
   if (signal) {
     throwIfSignalAborted(signal)
   }
-  const width = Math.max(1, maskImage.naturalWidth || maskImage.width)
-  const height = Math.max(1, maskImage.naturalHeight || maskImage.height)
+  const originalWidth = Math.max(1, maskImage.naturalWidth || maskImage.width)
+  const originalHeight = Math.max(1, maskImage.naturalHeight || maskImage.height)
+  const { width, height } = resolveEditMaskWorkingSize(originalWidth, originalHeight)
   const canvas = document.createElement('canvas')
   canvas.width = width
   canvas.height = height
@@ -369,6 +372,24 @@ export async function normalizeEditMaskForProvider(
     throwIfSignalAborted(signal)
   }
   return canvas.toDataURL('image/png')
+}
+
+function floorToDimensionMultiple(value: number, multiple: number): number {
+  return Math.max(multiple, Math.floor(value / multiple) * multiple)
+}
+
+function resolveEditMaskWorkingSize(width: number, height: number) {
+  const longestEdge = Math.max(width, height)
+  if (longestEdge <= EDIT_MASK_MAX_EDGE) {
+    return { width, height, scale: 1 }
+  }
+
+  const scale = EDIT_MASK_MAX_EDGE / Math.max(longestEdge, 1)
+  return {
+    width: floorToDimensionMultiple(width * scale, EDIT_MASK_DIMENSION_MULTIPLE),
+    height: floorToDimensionMultiple(height * scale, EDIT_MASK_DIMENSION_MULTIPLE),
+    scale,
+  }
 }
 
 export function createApiError(

@@ -4,6 +4,7 @@ import { findProviderById, getProviderSettings } from "./domain"
 import { useStore } from "./state"
 import { executeTask } from "./taskExecutor"
 import { enqueueTaskRun, requestAbortTaskRun, retryTaskRun } from "./taskRun"
+import { PROMPT_HARD_LIMIT } from "../lib/prompt"
 
 function handlePrepareFailure(
   snapshot: ReturnType<typeof useStore.getState>,
@@ -48,7 +49,7 @@ export async function submitTask() {
   const { task, requestSettings, normalizedParamsPatch } = prepared.draft
   if (prepared.draft.promptWasTruncated) {
     snapshot.setPrompt(task.prompt)
-    snapshot.showToast('提示词过长，已自动截断到 1000 字后提交', 'info')
+    snapshot.showToast(`提示词过长，已自动截断到 ${PROMPT_HARD_LIMIT} 字后提交`, 'info')
   }
   if (normalizedParamsPatch) {
     snapshot.setParams(normalizedParamsPatch)

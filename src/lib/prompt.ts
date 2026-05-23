@@ -1,5 +1,5 @@
-export const PROMPT_SOFT_LIMIT = 800
-export const PROMPT_HARD_LIMIT = 1000
+export const PROMPT_SOFT_LIMIT = 4000
+export const PROMPT_HARD_LIMIT = 5000
 
 export function normalizePromptText(prompt: string): string {
   return prompt.trim()

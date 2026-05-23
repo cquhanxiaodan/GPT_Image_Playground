@@ -13,6 +13,15 @@ const DEV_PROXY_REQUEST_ID_HEADER = 'x-dev-proxy-request-id'
 const DEFAULT_PROXY_TARGET = process.env.LOCAL_API_PROXY_TARGET || process.env.API_URL || ''
 const RESPONSE_CACHE_TTL_MS = 60 * 60 * 1000
 const RESPONSE_CACHE_MAX_ENTRIES = 20
+const ALLOWED_PROXY_METHODS = new Set(['POST', 'OPTIONS'])
+const ALLOWED_PROXY_PATHS = new Set([
+  '/v1/images/generations',
+  '/v1/images/edits',
+  '/v1/responses',
+  '/images/generations',
+  '/images/edits',
+  '/responses',
+])
 const responseCache = new Map()
 
 const MIME_TYPES = {
@@ -65,6 +74,15 @@ function joinTargetPath(basePath, path) {
   const normalizedBasePath = trimTrailingSlashes(basePath || '')
   const normalizedPath = path.startsWith('/') ? path : `/${path}`
   return `${normalizedBasePath}${normalizedPath}` || '/'
+}
+
+function isAllowedProxyRequest(method, proxiedPath) {
+  if (!ALLOWED_PROXY_METHODS.has(method)) {
+    return false
+  }
+
+  const normalizedPath = normalizePathname(proxiedPath) || '/'
+  return ALLOWED_PROXY_PATHS.has(normalizedPath)
 }
 
 function createRequestId() {
@@ -146,6 +164,23 @@ async function handleProxy(req, res, requestUrl) {
   }
 
   const proxiedPath = requestUrl.pathname.slice(API_PROXY_PREFIX.length) || '/'
+  if (!isAllowedProxyRequest(req.method || 'GET', proxiedPath)) {
+    res.writeHead(403, { 'Content-Type': 'text/plain; charset=utf-8' })
+    res.end('Forbidden: API proxy path restricted')
+    return
+  }
+
+  if (req.method === 'OPTIONS') {
+    res.writeHead(204, {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': Array.from(ALLOWED_PROXY_METHODS).join(', '),
+      'Access-Control-Allow-Headers': 'authorization, content-type, x-dev-proxy-target',
+      'Access-Control-Max-Age': '86400',
+    })
+    res.end()
+    return
+  }
+
   const targetUrl = new URL(targetBaseUrl)
   targetUrl.pathname = joinTargetPath(targetUrl.pathname, proxiedPath)
   targetUrl.search = requestUrl.search

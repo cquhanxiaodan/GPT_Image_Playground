@@ -86,6 +86,7 @@ export default function TaskGrid() {
     handleBatchRestore,
     handleBatchPurge,
     handleBatchMoveCategory,
+    handleBatchDownload,
     openMoveCategoryModal,
     handleSingleTaskMoveCategory,
     handleBatchFavorite,
@@ -146,6 +147,9 @@ export default function TaskGrid() {
             }}
             onBatchMoveCategory={() => {
               void handleBatchMoveCategory()
+            }}
+            onBatchDownload={() => {
+              void handleBatchDownload()
             }}
             onToggleAllVisible={handleToggleAllVisible}
             onClearSelected={clearSelectedTasks}

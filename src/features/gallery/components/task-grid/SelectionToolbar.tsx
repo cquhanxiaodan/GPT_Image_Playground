@@ -14,6 +14,7 @@ interface SelectionToolbarProps {
   onBatchCategoryTargetChange: (value: string) => void
   onBatchFavorite: () => void
   onBatchMoveCategory: () => void
+  onBatchDownload: () => void
   onToggleAllVisible: () => void
   onClearSelected: () => void
   onBatchRestore: () => void
@@ -33,6 +34,7 @@ export default function SelectionToolbar({
   onBatchCategoryTargetChange,
   onBatchFavorite,
   onBatchMoveCategory,
+  onBatchDownload,
   onToggleAllVisible,
   onClearSelected,
   onBatchRestore,
@@ -80,6 +82,15 @@ export default function SelectionToolbar({
               className="h-8 rounded-full border border-emerald-200/80 bg-emerald-50 px-3 text-[12px] font-medium text-emerald-600 transition-all duration-200 hover:-translate-y-px hover:bg-emerald-100/80 disabled:cursor-not-allowed disabled:opacity-40 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300 dark:hover:bg-emerald-500/20"
             >
               移动分类
+            </button>
+
+            <button
+              type="button"
+              onClick={onBatchDownload}
+              disabled={!selectedCount}
+              className="h-8 rounded-full border border-sky-200/80 bg-sky-50 px-3 text-[12px] font-medium text-sky-600 transition-all duration-200 hover:-translate-y-px hover:bg-sky-100/80 disabled:cursor-not-allowed disabled:opacity-40 dark:border-sky-500/20 dark:bg-sky-500/10 dark:text-sky-300 dark:hover:bg-sky-500/20"
+            >
+              下载图片
             </button>
           </>
         )}
