@@ -2,8 +2,12 @@ import { describe, expect, it } from 'vitest'
 import { parseImagesPayloadText } from '../payloadText'
 
 describe('parseImagesPayloadText', () => {
-  it('extracts large images json payload without full payload traversal', () => {
-    const largeBase64 = 'A'.repeat(2 * 1024 * 1024 + 16)
+  it.each([
+    ['threshold', 2 * 1024 * 1024 + 16],
+    ['typical 4k', 16 * 1024 * 1024],
+    ['large 4k', 64 * 1024 * 1024],
+  ])('extracts %s images json payload without full payload traversal', (_label, base64Length) => {
+    const largeBase64 = 'A'.repeat(base64Length)
     const payloadText = JSON.stringify({
       created: 1779496363,
       data: [
