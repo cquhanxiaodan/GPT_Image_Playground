@@ -93,7 +93,9 @@ export function sanitizeDebugValue(value: unknown, depth = 0, visited?: WeakSet<
   if (isRecord(value) && hasUsableImagePayload(value)) {
     const compact = collectDebugImagePayloadFields(value)
     for (const [key, fieldValue] of Object.entries(compact)) {
-      compact[key] = summarizeDebugString(fieldValue)
+      compact[key] = key === 'b64_json' || key === 'result'
+        ? `[base64 length=${fieldValue.length}]`
+        : summarizeDebugString(fieldValue)
     }
 
     return compact

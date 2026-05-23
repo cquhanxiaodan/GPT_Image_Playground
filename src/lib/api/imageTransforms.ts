@@ -39,7 +39,8 @@ export async function dataUrlToBlob(dataUrl: string, signal?: AbortSignal): Prom
 }
 
 export function getDataUrlByteSize(dataUrl: string): number {
-  const base64 = dataUrl.split(',')[1] || ''
+  const commaIndex = dataUrl.indexOf(',')
+  const base64 = commaIndex >= 0 ? dataUrl.slice(commaIndex + 1) : ''
   return getBase64ByteLength(base64)
 }
 
@@ -547,7 +548,7 @@ export async function buildDecodedImageAssetFromUrlValue(
 }
 
 function normalizeBase64Payload(base64: string): string {
-  const normalized = base64.trim().replace(/\s+/g, '')
+  const normalized = normalizeBase64PayloadText(base64)
   if (!normalized) {
     throw createApiError('图片 base64 数据为空')
   }
@@ -578,6 +579,51 @@ function normalizeBase64Payload(base64: string): string {
   }
 
   return normalized
+}
+
+function normalizeBase64PayloadText(base64: string): string {
+  let firstWhitespaceIndex = -1
+  let startIndex = 0
+  let endIndex = base64.length
+
+  while (startIndex < endIndex && isAsciiWhitespace(base64.charCodeAt(startIndex))) {
+    startIndex += 1
+  }
+  while (endIndex > startIndex && isAsciiWhitespace(base64.charCodeAt(endIndex - 1))) {
+    endIndex -= 1
+  }
+
+  for (let index = startIndex; index < endIndex; index += 1) {
+    if (isAsciiWhitespace(base64.charCodeAt(index))) {
+      firstWhitespaceIndex = index
+      break
+    }
+  }
+
+  if (firstWhitespaceIndex < 0) {
+    return startIndex === 0 && endIndex === base64.length ? base64 : base64.slice(startIndex, endIndex)
+  }
+
+  const chunks = [base64.slice(startIndex, firstWhitespaceIndex)]
+  let chunkStart = -1
+  for (let index = firstWhitespaceIndex + 1; index < endIndex; index += 1) {
+    if (isAsciiWhitespace(base64.charCodeAt(index))) {
+      if (chunkStart >= 0) {
+        chunks.push(base64.slice(chunkStart, index))
+        chunkStart = -1
+      }
+    } else if (chunkStart < 0) {
+      chunkStart = index
+    }
+  }
+  if (chunkStart >= 0) {
+    chunks.push(base64.slice(chunkStart, endIndex))
+  }
+  return chunks.join('')
+}
+
+function isAsciiWhitespace(code: number): boolean {
+  return code === 9 || code === 10 || code === 11 || code === 12 || code === 13 || code === 32
 }
 
 async function decodeBase64ToBytes(base64: string, signal?: AbortSignal): Promise<Uint8Array> {
