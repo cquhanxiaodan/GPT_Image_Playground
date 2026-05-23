@@ -5,6 +5,7 @@ interface DetailInfoActionsProps {
   task: TaskRecord
   inRecycleBin: boolean
   canEditOutputs: boolean
+  isRecovering: boolean
   onReuse: () => void
   onEdit: () => void
   onRetry: () => void
@@ -21,7 +22,8 @@ export default function DetailInfoActions(props: DetailInfoActionsProps) {
   const {
     task,
     inRecycleBin,
-    canEditOutputs,
+  canEditOutputs,
+  isRecovering,
     onReuse,
     onEdit,
     onRetry,
@@ -114,13 +116,14 @@ export default function DetailInfoActions(props: DetailInfoActionsProps) {
               <button
                 type="button"
                 onClick={onRecover}
-                className="flex-1 whitespace-nowrap rounded-lg bg-emerald-50 px-2 py-2 text-xs font-medium text-emerald-600 transition hover:bg-emerald-100 sm:px-3 sm:text-sm dark:bg-emerald-500/10 dark:text-emerald-300 dark:hover:bg-emerald-500/20"
+                disabled={isRecovering}
+                className="flex-1 whitespace-nowrap rounded-lg bg-emerald-50 px-2 py-2 text-xs font-medium text-emerald-600 transition hover:bg-emerald-100 disabled:cursor-wait disabled:opacity-60 sm:px-3 sm:text-sm dark:bg-emerald-500/10 dark:text-emerald-300 dark:hover:bg-emerald-500/20"
               >
                 <span className="flex items-center justify-center gap-1.5">
                   <svg className="h-4 w-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v6h6M20 20v-6h-6M5 19A9 9 0 0 0 19 5" />
                   </svg>
-                  恢复结果
+                  {isRecovering ? '恢复中...' : '恢复结果'}
                 </span>
               </button>
               <button

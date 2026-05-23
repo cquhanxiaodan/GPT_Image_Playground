@@ -1,5 +1,5 @@
 import type { TaskRecord } from '../../../../types'
-import { resolveTaskKind } from '../../../../store'
+import { canRecoverTaskFromProxyCache, resolveTaskKind } from '../../../../store'
 import DetailInfoActions from './DetailInfoActions'
 import DetailInfoHeader from './DetailInfoHeader'
 import DetailInputImagesSection from './DetailInputImagesSection'
@@ -32,6 +32,7 @@ interface DetailInfoPanelProps {
   appliedAction: string | null
   revisedPrompt: string
   canEditOutputs: boolean
+  isRecovering: boolean
   onClose: () => void
   onToggleFavorite: () => void
   onCopyPrompt: () => void
@@ -73,6 +74,7 @@ export default function DetailInfoPanel({
   appliedAction,
   revisedPrompt,
   canEditOutputs,
+  isRecovering,
   onClose,
   onToggleFavorite,
   onCopyPrompt,
@@ -90,6 +92,7 @@ export default function DetailInfoPanel({
   onPurge,
 }: DetailInfoPanelProps) {
   const taskKind = resolveTaskKind(task)
+  const canRecover = canRecoverTaskFromProxyCache(task)
 
   return (
     <div className="flex min-w-0 w-full flex-col overflow-y-auto p-5 md:flex-1">
@@ -145,12 +148,21 @@ export default function DetailInfoPanel({
           deletedAt={task.deletedAt}
           cleanupDueAt={cleanupDueAt}
         />
+
+        {canRecover && (
+          <div className="mt-3 rounded-2xl border border-emerald-200/80 bg-emerald-50/80 px-3 py-2 text-xs leading-5 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-200">
+            {isRecovering
+              ? '正在从代理缓存恢复结果，请等待处理完成。'
+              : '检测到本次请求已有代理缓存，可点击“恢复结果”尝试找回已返回的图片。'}
+          </div>
+        )}
       </div>
 
       <DetailInfoActions
         task={task}
         inRecycleBin={inRecycleBin}
         canEditOutputs={canEditOutputs}
+        isRecovering={isRecovering}
         onReuse={onReuse}
         onEdit={onEdit}
         onRetry={onRetry}

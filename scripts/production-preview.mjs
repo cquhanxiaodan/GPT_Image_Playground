@@ -8,19 +8,31 @@ const PORT = Number(process.env.PORT || 4173)
 const DIST_DIR = resolve(process.cwd(), 'dist')
 const API_PROXY_PREFIX = '/api-proxy'
 const API_PROXY_CACHE_PREFIX = '/api-proxy-cache'
+const API_PROXY_CACHE_BODY_PREFIX = '/api-proxy-cache-body'
 const DEV_PROXY_TARGET_HEADER = 'x-dev-proxy-target'
 const DEV_PROXY_REQUEST_ID_HEADER = 'x-dev-proxy-request-id'
 const DEFAULT_PROXY_TARGET = process.env.LOCAL_API_PROXY_TARGET || process.env.API_URL || ''
 const RESPONSE_CACHE_TTL_MS = 60 * 60 * 1000
 const RESPONSE_CACHE_MAX_ENTRIES = 20
-const ALLOWED_PROXY_METHODS = new Set(['POST', 'OPTIONS'])
 const ALLOWED_PROXY_PATHS = new Set([
   '/v1/images/generations',
   '/v1/images/edits',
   '/v1/responses',
+  '/v1/models',
   '/images/generations',
   '/images/edits',
   '/responses',
+  '/models',
+])
+const ALLOWED_PROXY_METHODS_BY_PATH = new Map([
+  ['/v1/images/generations', new Set(['POST', 'OPTIONS'])],
+  ['/v1/images/edits', new Set(['POST', 'OPTIONS'])],
+  ['/v1/responses', new Set(['POST', 'OPTIONS'])],
+  ['/v1/models', new Set(['GET', 'HEAD', 'OPTIONS'])],
+  ['/images/generations', new Set(['POST', 'OPTIONS'])],
+  ['/images/edits', new Set(['POST', 'OPTIONS'])],
+  ['/responses', new Set(['POST', 'OPTIONS'])],
+  ['/models', new Set(['GET', 'HEAD', 'OPTIONS'])],
 ])
 const responseCache = new Map()
 
@@ -77,12 +89,13 @@ function joinTargetPath(basePath, path) {
 }
 
 function isAllowedProxyRequest(method, proxiedPath) {
-  if (!ALLOWED_PROXY_METHODS.has(method)) {
-    return false
-  }
-
   const normalizedPath = normalizePathname(proxiedPath) || '/'
-  return ALLOWED_PROXY_PATHS.has(normalizedPath)
+  return ALLOWED_PROXY_PATHS.has(normalizedPath) && ALLOWED_PROXY_METHODS_BY_PATH.get(normalizedPath)?.has(method)
+}
+
+function getAllowedProxyMethods(proxiedPath) {
+  const normalizedPath = normalizePathname(proxiedPath) || '/'
+  return Array.from(ALLOWED_PROXY_METHODS_BY_PATH.get(normalizedPath) ?? [])
 }
 
 function createRequestId() {
@@ -173,7 +186,7 @@ async function handleProxy(req, res, requestUrl) {
   if (req.method === 'OPTIONS') {
     res.writeHead(204, {
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': Array.from(ALLOWED_PROXY_METHODS).join(', '),
+      'Access-Control-Allow-Methods': getAllowedProxyMethods(proxiedPath).join(', '),
       'Access-Control-Allow-Headers': 'authorization, content-type, x-dev-proxy-target',
       'Access-Control-Max-Age': '86400',
     })
@@ -262,6 +275,24 @@ function handleProxyCache(req, res, requestUrl) {
   }))
 }
 
+function handleProxyCacheBody(req, res, requestUrl) {
+  pruneResponseCache()
+  const requestId = decodeURIComponent(requestUrl.pathname.slice(API_PROXY_CACHE_BODY_PREFIX.length).replace(/^\/+/, ''))
+  const entry = requestId ? responseCache.get(requestId) : null
+
+  if (!entry) {
+    res.writeHead(404, { 'Content-Type': 'application/json; charset=utf-8' })
+    res.end(JSON.stringify({ error: 'cached proxy response not found' }))
+    return
+  }
+
+  const headers = { ...entry.headers, 'Cache-Control': 'no-store' }
+  headers[DEV_PROXY_REQUEST_ID_HEADER] = requestId
+  const body = Buffer.from(entry.bodyBase64 || '', 'base64')
+  res.writeHead(entry.status, headers)
+  res.end(body)
+}
+
 async function handleStatic(req, res, requestUrl) {
   const pathname = requestUrl.pathname === '/' ? '/index.html' : requestUrl.pathname
   let filePath = safeFilePath(pathname)
@@ -304,6 +335,11 @@ const server = createServer(async (req, res) => {
   const requestUrl = new URL(req.url || '/', `http://${req.headers.host || '127.0.0.1'}`)
 
   try {
+    if (requestUrl.pathname === API_PROXY_CACHE_BODY_PREFIX || requestUrl.pathname.startsWith(`${API_PROXY_CACHE_BODY_PREFIX}/`)) {
+      handleProxyCacheBody(req, res, requestUrl)
+      return
+    }
+
     if (requestUrl.pathname === API_PROXY_CACHE_PREFIX || requestUrl.pathname.startsWith(`${API_PROXY_CACHE_PREFIX}/`)) {
       handleProxyCache(req, res, requestUrl)
       return

@@ -1,4 +1,4 @@
-import { buildDevProxyResponseCacheUrl } from '../devProxy'
+import { buildDevProxyResponseCacheBodyUrl, buildDevProxyResponseCacheUrl } from '../devProxy'
 import { createApiError } from './imageTransforms'
 
 interface CachedProxyResponsePayload {
@@ -41,6 +41,15 @@ function buildHeaders(input: CachedProxyResponsePayload['headers']): Headers {
 }
 
 export async function fetchCachedProxyResponse(requestId: string, signal: AbortSignal): Promise<Response> {
+  const bodyResponse = await fetch(buildDevProxyResponseCacheBodyUrl(requestId), {
+    method: 'GET',
+    cache: 'no-store',
+    signal,
+  })
+  if (bodyResponse.ok) {
+    return bodyResponse
+  }
+
   const response = await fetch(buildDevProxyResponseCacheUrl(requestId), {
     method: 'GET',
     cache: 'no-store',

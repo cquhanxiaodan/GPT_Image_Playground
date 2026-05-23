@@ -43,6 +43,7 @@ export default function DetailModal() {
   const showToast = useStore((state) => state.showToast)
   const proxyCacheInputRef = useRef<HTMLInputElement>(null)
   const [lineageRootTaskId, setLineageRootTaskId] = useState<string | null>(null)
+  const [recoveringTaskId, setRecoveringTaskId] = useState<string | null>(null)
   const previousDetailTaskIdRef = useRef<string | null>(null)
 
   const task = useMemo(
@@ -158,6 +159,7 @@ export default function DetailModal() {
         : 'bg-gray-100 text-gray-500 dark:bg-white/[0.04] dark:text-gray-400'
   const durationLabel = formatElapsedDuration(task.elapsed)
   const hasLineage = railItems.length > 0
+  const isRecovering = recoveringTaskId === task.id
 
   const closeModal = () => setDetailTaskId(null)
 
@@ -176,11 +178,20 @@ export default function DetailModal() {
   }
 
   const handleRecover = async () => {
+    if (isRecovering) {
+      showToast('正在恢复结果，请稍候...', 'info')
+      return
+    }
+
+    setRecoveringTaskId(task.id)
     try {
+      showToast('正在从代理缓存恢复结果...', 'info')
       const recoveredCount = await recoverTaskFromProxyCache(task)
       showToast(`已从代理缓存恢复 ${recoveredCount} 张图片`, 'success')
     } catch (error) {
       showToast(`恢复失败：${error instanceof Error ? error.message : String(error)}`, 'error')
+    } finally {
+      setRecoveringTaskId(null)
     }
   }
 
@@ -192,12 +203,27 @@ export default function DetailModal() {
       return
     }
 
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `${requestId}.json`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+    void (async () => {
+      try {
+        showToast('正在准备代理缓存下载...', 'info')
+        const response = await fetch(url, { cache: 'no-store' })
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`)
+        }
+        const blob = await response.blob()
+        const objectUrl = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = objectUrl
+        link.download = `${requestId}.json`
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        window.setTimeout(() => URL.revokeObjectURL(objectUrl), 0)
+        showToast('代理缓存已开始下载', 'success')
+      } catch (error) {
+        showToast(`下载缓存失败：${error instanceof Error ? error.message : String(error)}`, 'error')
+      }
+    })()
   }
 
   const handleImportProxyCache = () => {
@@ -411,6 +437,7 @@ export default function DetailModal() {
             appliedAction={appliedAction}
             revisedPrompt={revisedPrompt}
             canEditOutputs={canEditOutputs}
+            isRecovering={isRecovering}
             onClose={closeModal}
             onToggleFavorite={handleToggleFavorite}
             onCopyPrompt={handleCopyPrompt}
