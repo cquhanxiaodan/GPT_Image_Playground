@@ -11,7 +11,7 @@ const API_PROXY_CACHE_PREFIX = '/api-proxy-cache'
 const DEV_PROXY_TARGET_HEADER = 'x-dev-proxy-target'
 const DEV_PROXY_REQUEST_ID_HEADER = 'x-dev-proxy-request-id'
 const DEFAULT_PROXY_TARGET = process.env.LOCAL_API_PROXY_TARGET || process.env.API_URL || ''
-const RESPONSE_CACHE_TTL_MS = 10 * 60 * 1000
+const RESPONSE_CACHE_TTL_MS = 60 * 60 * 1000
 const RESPONSE_CACHE_MAX_ENTRIES = 20
 const responseCache = new Map()
 
