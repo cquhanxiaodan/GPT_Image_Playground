@@ -16,6 +16,19 @@ interface ProxyCacheJsonPayload {
   bodyBase64?: string
 }
 
+function isFailedProxyResponseBody(responseBody: unknown): boolean {
+  if (!responseBody || typeof responseBody !== 'object') {
+    return false
+  }
+
+  const record = responseBody as Record<string, unknown>
+  if (record.type === 'error') {
+    return true
+  }
+
+  return Boolean(record.error && typeof record.error === 'object')
+}
+
 export function findRecoverableProxyRequestId(task: TaskRecord): string | null {
   const entries = task.errorDebug?.requestLog ?? []
   for (let index = entries.length - 1; index >= 0; index -= 1) {
@@ -23,7 +36,8 @@ export function findRecoverableProxyRequestId(task: TaskRecord): string | null {
     if (
       entry.responseStatus === 200 &&
       typeof entry.responseRequestId === 'string' &&
-      entry.responseRequestId.trim()
+      entry.responseRequestId.trim() &&
+      !isFailedProxyResponseBody(entry.responseBody)
     ) {
       return entry.responseRequestId.trim()
     }
