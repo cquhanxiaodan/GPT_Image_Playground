@@ -58,6 +58,12 @@ function readJsonStringField(text: string, fieldName: string): string | undefine
 
   const stringStart = valueStart
   valueStart += 1
+  const nextQuoteIndex = text.indexOf('"', valueStart)
+  const nextEscapeIndex = text.indexOf('\\', valueStart)
+  if (nextQuoteIndex >= 0 && (nextEscapeIndex < 0 || nextEscapeIndex > nextQuoteIndex)) {
+    return text.slice(valueStart, nextQuoteIndex)
+  }
+
   let index = valueStart
   let escaped = false
   let hasEscapes = false
