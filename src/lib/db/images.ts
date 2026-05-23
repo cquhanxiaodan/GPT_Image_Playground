@@ -135,13 +135,21 @@ export async function hashDataUrl(dataUrl: string): Promise<string> {
 export async function hashBlobContent(blob: Blob): Promise<string> {
   assertBlob(blob, 'blob')
 
-  const bytes = new Uint8Array(await blob.arrayBuffer())
+  const bytes = await blobToUint8Array(blob)
   if (!globalThis.crypto?.subtle) {
     return hashBytesFallback(bytes)
   }
 
-  const hashBuffer = await crypto.subtle.digest('SHA-256', bytes)
+  const hashBuffer = await crypto.subtle.digest('SHA-256', toArrayBuffer(bytes))
   return bufferToHex(hashBuffer)
+}
+
+async function blobToUint8Array(blob: Blob): Promise<Uint8Array> {
+  if (typeof blob.bytes === 'function') {
+    return await blob.bytes()
+  }
+
+  return new Uint8Array(await blob.arrayBuffer())
 }
 
 function hashDataUrlFallback(dataUrl: string): string {
@@ -157,6 +165,10 @@ function hashDataUrlFallback(dataUrl: string): string {
   }
 
   return `fallback-${(h1 >>> 0).toString(16).padStart(8, '0')}${(h2 >>> 0).toString(16).padStart(8, '0')}`
+}
+
+function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
+  return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer
 }
 
 function hashBytesFallback(bytes: Uint8Array): string {

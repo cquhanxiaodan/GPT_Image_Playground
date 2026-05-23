@@ -84,13 +84,11 @@ export async function base64ToBlob(
   }
 
   try {
-    const bytes = decodeBase64ToBytes(normalizedBase64, signal)
+    const bytes = await decodeBase64ToBytes(normalizedBase64, signal)
     if (signal) {
       throwIfSignalAborted(signal)
     }
-    const stableBytes = new Uint8Array(bytes.byteLength)
-    stableBytes.set(bytes)
-    return new Blob([stableBytes], { type: mimeType })
+    return new Blob([bytes.buffer as ArrayBuffer], { type: mimeType })
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
       throw error
@@ -547,10 +545,11 @@ function normalizeBase64Payload(base64: string): string {
   return normalized
 }
 
-function decodeBase64ToBytes(base64: string, signal?: AbortSignal): Uint8Array {
+async function decodeBase64ToBytes(base64: string, signal?: AbortSignal): Promise<Uint8Array> {
   const chunkSize = 0x8000
   const bytes = new Uint8Array(getBase64ByteLength(base64))
   let writeOffset = 0
+  let processedChunks = 0
 
   for (let index = 0; index < base64.length; index += chunkSize) {
     if (signal) {
@@ -561,6 +560,10 @@ function decodeBase64ToBytes(base64: string, signal?: AbortSignal): Uint8Array {
     for (let chunkIndex = 0; chunkIndex < binaryChunk.length; chunkIndex += 1) {
       bytes[writeOffset] = binaryChunk.charCodeAt(chunkIndex)
       writeOffset += 1
+    }
+    processedChunks += 1
+    if (processedChunks % 32 === 0) {
+      await new Promise((resolve) => setTimeout(resolve, 0))
     }
   }
 
