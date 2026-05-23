@@ -12,6 +12,7 @@ import {
   parseImagesFromPayload,
 } from './imagePayload'
 import { readImagesPayload } from './payloadText'
+import { fetchCachedProxyResponse } from './proxyResponseRecovery'
 import { createImagesPlanner, mergeTaskResponseTransportMeta } from './requestPlanner'
 import { buildImagesRequestSpec } from './imagesRequestBuilder'
 import { readImagesPayloadStream } from './sseReader'
@@ -23,6 +24,19 @@ import type {
   CallApiResult,
   SharedRequestContext,
 } from './types'
+
+async function recoverImagesPayloadFromProxyCache(
+  requestId: string | undefined,
+  ctx: SharedRequestContext,
+  logEntry?: ApiDebugRequestLogEntry,
+): Promise<unknown | null> {
+  if (!requestId || !ctx.forceProxy) {
+    return null
+  }
+
+  const cachedResponse = await fetchCachedProxyResponse(requestId, ctx.controller.signal)
+  return await readImagesPayload(cachedResponse, logEntry)
+}
 
 function normalizeImagesEditCompatibilityError(error: unknown): unknown {
   if (!(error instanceof Error)) {
@@ -83,7 +97,16 @@ export async function callImagesApi(
               debugLogEntry,
             )
           : null
-      const payload = streamResult?.payload ?? (await readImagesPayload(response, debugLogEntry))
+      let payload: unknown
+      try {
+        payload = streamResult?.payload ?? (await readImagesPayload(response, debugLogEntry))
+      } catch (parseError) {
+        const recoveredPayload = await recoverImagesPayloadFromProxyCache(requestId, ctx, debugLogEntry)
+        if (recoveredPayload == null) {
+          throw parseError
+        }
+        payload = recoveredPayload
+      }
       const streamedImages = streamResult?.streamedImages ?? []
       actualTransport = streamResult?.actualTransport ?? 'json'
       const responseMetaFromCalls = buildTaskResponseMetaFromCalls(

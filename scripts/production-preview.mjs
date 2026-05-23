@@ -7,8 +7,13 @@ const HOST = process.env.HOST || '0.0.0.0'
 const PORT = Number(process.env.PORT || 4173)
 const DIST_DIR = resolve(process.cwd(), 'dist')
 const API_PROXY_PREFIX = '/api-proxy'
+const API_PROXY_CACHE_PREFIX = '/api-proxy-cache'
 const DEV_PROXY_TARGET_HEADER = 'x-dev-proxy-target'
+const DEV_PROXY_REQUEST_ID_HEADER = 'x-dev-proxy-request-id'
 const DEFAULT_PROXY_TARGET = process.env.LOCAL_API_PROXY_TARGET || process.env.API_URL || ''
+const RESPONSE_CACHE_TTL_MS = 10 * 60 * 1000
+const RESPONSE_CACHE_MAX_ENTRIES = 20
+const responseCache = new Map()
 
 const MIME_TYPES = {
   '.css': 'text/css; charset=utf-8',
@@ -62,6 +67,34 @@ function joinTargetPath(basePath, path) {
   return `${normalizedBasePath}${normalizedPath}` || '/'
 }
 
+function createRequestId() {
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`
+}
+
+function pruneResponseCache() {
+  const now = Date.now()
+  for (const [requestId, entry] of responseCache.entries()) {
+    if (entry.expiresAt <= now) {
+      responseCache.delete(requestId)
+    }
+  }
+
+  while (responseCache.size > RESPONSE_CACHE_MAX_ENTRIES) {
+    const oldestRequestId = responseCache.keys().next().value
+    if (!oldestRequestId) break
+    responseCache.delete(oldestRequestId)
+  }
+}
+
+function cacheProxyResponse(requestId, response) {
+  responseCache.set(requestId, {
+    ...response,
+    createdAt: Date.now(),
+    expiresAt: Date.now() + RESPONSE_CACHE_TTL_MS,
+  })
+  pruneResponseCache()
+}
+
 function isStaticAsset(pathname) {
   return pathname.includes('.') && !pathname.endsWith('/')
 }
@@ -100,6 +133,7 @@ async function readRequestBody(req) {
 }
 
 async function handleProxy(req, res, requestUrl) {
+  const requestId = createRequestId()
   const headerTarget = Array.isArray(req.headers[DEV_PROXY_TARGET_HEADER])
     ? req.headers[DEV_PROXY_TARGET_HEADER][0]
     : req.headers[DEV_PROXY_TARGET_HEADER]
@@ -140,17 +174,57 @@ async function handleProxy(req, res, requestUrl) {
     if (lowerName === 'connection' || lowerName === 'content-encoding' || lowerName === 'transfer-encoding') return
     responseHeaders[name] = value
   })
+  responseHeaders[DEV_PROXY_REQUEST_ID_HEADER] = requestId
 
   res.writeHead(upstream.status, responseHeaders)
   if (!upstream.body) {
+    cacheProxyResponse(requestId, {
+      status: upstream.status,
+      statusText: upstream.statusText,
+      headers: responseHeaders,
+      bodyBase64: '',
+    })
     res.end()
     return
   }
 
+  const chunks = []
   for await (const chunk of upstream.body) {
+    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)
+    chunks.push(buffer)
     res.write(chunk)
   }
+  const body = Buffer.concat(chunks)
+  cacheProxyResponse(requestId, {
+    status: upstream.status,
+    statusText: upstream.statusText,
+    headers: responseHeaders,
+    bodyBase64: body.toString('base64'),
+  })
   res.end()
+}
+
+function handleProxyCache(req, res, requestUrl) {
+  pruneResponseCache()
+  const requestId = decodeURIComponent(requestUrl.pathname.slice(API_PROXY_CACHE_PREFIX.length).replace(/^\/+/, ''))
+  const entry = requestId ? responseCache.get(requestId) : null
+
+  if (!entry) {
+    res.writeHead(404, { 'Content-Type': 'application/json; charset=utf-8' })
+    res.end(JSON.stringify({ error: 'cached proxy response not found' }))
+    return
+  }
+
+  res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' })
+  res.end(JSON.stringify({
+    requestId,
+    status: entry.status,
+    statusText: entry.statusText,
+    headers: entry.headers,
+    bodyBase64: entry.bodyBase64,
+    createdAt: entry.createdAt,
+    expiresAt: entry.expiresAt,
+  }))
 }
 
 async function handleStatic(req, res, requestUrl) {
@@ -195,6 +269,11 @@ const server = createServer(async (req, res) => {
   const requestUrl = new URL(req.url || '/', `http://${req.headers.host || '127.0.0.1'}`)
 
   try {
+    if (requestUrl.pathname === API_PROXY_CACHE_PREFIX || requestUrl.pathname.startsWith(`${API_PROXY_CACHE_PREFIX}/`)) {
+      handleProxyCache(req, res, requestUrl)
+      return
+    }
+
     if (requestUrl.pathname === API_PROXY_PREFIX || requestUrl.pathname.startsWith(`${API_PROXY_PREFIX}/`)) {
       await handleProxy(req, res, requestUrl)
       return

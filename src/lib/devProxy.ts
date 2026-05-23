@@ -8,6 +8,11 @@ export interface DevProxyConfig {
 }
 
 export const DEV_PROXY_REQUEST_ID_HEADER = 'x-dev-proxy-request-id'
+export const DEV_PROXY_RESPONSE_CACHE_PREFIX = '/api-proxy-cache'
+
+export function buildDevProxyResponseCacheUrl(requestId: string): string {
+  return `${DEV_PROXY_RESPONSE_CACHE_PREFIX}/${encodeURIComponent(requestId)}`
+}
 
 function trimTrailingSlashes(value: string): string {
   return value.replace(/\/+$/, '')
