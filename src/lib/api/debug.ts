@@ -41,7 +41,7 @@ export function summarizeDebugString(value: string): string {
     return `[data-url mime=${mime} length=${value.length}]`
   }
 
-  if (/^[A-Za-z0-9+/=]{600,}$/.test(value)) {
+  if (value.length >= 600 && isLikelyBase64DebugString(value)) {
     return `[base64 length=${value.length}]`
   }
 
@@ -50,6 +50,23 @@ export function summarizeDebugString(value: string): string {
   }
 
   return value
+}
+
+function isLikelyBase64DebugString(value: string): boolean {
+  for (let index = 0; index < value.length; index += 1) {
+    const code = value.charCodeAt(index)
+    const isValid =
+      (code >= 65 && code <= 90) ||
+      (code >= 97 && code <= 122) ||
+      (code >= 48 && code <= 57) ||
+      code === 43 ||
+      code === 47 ||
+      code === 61
+    if (!isValid) {
+      return false
+    }
+  }
+  return true
 }
 
 export function sanitizeDebugValue(value: unknown, depth = 0, visited?: WeakSet<object>): unknown {
