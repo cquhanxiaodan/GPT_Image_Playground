@@ -194,12 +194,12 @@ async function handleProxy(req, res, requestUrl) {
     chunks.push(buffer)
     res.write(chunk)
   }
-  const body = Buffer.concat(chunks)
+  const responseBody = Buffer.concat(chunks)
   cacheProxyResponse(requestId, {
     status: upstream.status,
     statusText: upstream.statusText,
     headers: responseHeaders,
-    bodyBase64: body.toString('base64'),
+    bodyBase64: responseBody.toString('base64'),
   })
   res.end()
 }
