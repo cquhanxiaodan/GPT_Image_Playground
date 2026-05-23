@@ -187,6 +187,19 @@ export function attachLocalDebugToError(
   return apiError
 }
 
+function extractCloudflareErrorTitle(text: string): string | null {
+  const title = /<title>\s*([^<]+?)\s*<\/title>/i.exec(text)?.[1]
+  if (!title || !/cloudflare|bad gateway|error code/i.test(title)) {
+    return null
+  }
+
+  const normalizedTitle = title.replace(/\s+/g, ' ').trim()
+  if (/502|bad gateway/i.test(normalizedTitle)) {
+    return '上游站点返回 Bad Gateway（Cloudflare 502），供应商源站暂时不可用或生成链路中断。'
+  }
+  return `上游站点返回 Cloudflare 错误：${normalizedTitle}`
+}
+
 export async function buildApiErrorFromResponse(
   response: Response,
   logEntry?: ApiDebugRequestLogEntry,
@@ -218,7 +231,7 @@ export async function buildApiErrorFromResponse(
       if (logEntry) {
         logEntry.responseText = summarizeDebugString(text)
       }
-      errorMessage = text
+      errorMessage = extractCloudflareErrorTitle(text) ?? text
     }
   } catch {
     /* ignore */

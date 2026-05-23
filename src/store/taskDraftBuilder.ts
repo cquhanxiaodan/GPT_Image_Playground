@@ -47,6 +47,7 @@ export interface PreparedTaskDraft {
   task: TaskRecord
   requestSettings: AppSettings
   promptWasTruncated: boolean
+  promptWasCompressed: boolean
   normalizedParamsPatch?: Partial<TaskParams>
 }
 
@@ -67,6 +68,7 @@ export interface ImageEditDraftWriteResult {
   nextProviderId: string | null
   nextPrompt: string
   promptWasTruncated: boolean
+  promptWasCompressed: boolean
   nextParams: TaskParams
   nextInputImages: InputImage[]
 }
@@ -126,6 +128,7 @@ export function buildPreparedTaskDraft(
     }),
     requestSettings,
     promptWasTruncated: preparedPrompt.truncated,
+    promptWasCompressed: preparedPrompt.compressed,
     normalizedParamsPatch: getChangedTaskParams(snapshot.params, normalizedParams),
   }
 }
@@ -145,6 +148,7 @@ export function writeImageEditDraft(input: ImageEditDraftWriteInput): ImageEditD
     nextProviderId,
     nextPrompt: preparedPrompt.value,
     promptWasTruncated: preparedPrompt.truncated,
+    promptWasCompressed: preparedPrompt.compressed,
     nextParams: {
       ...input.session.params,
       n: 1,

@@ -135,8 +135,10 @@ export async function applyImageEditToInput(options: {
   setInputImages(draft.nextInputImages)
   setImageEditSession(null)
   showToast(
-    draft.promptWasTruncated
-      ? `提示词过长，已自动截断到 ${PROMPT_HARD_LIMIT} 字并写入输入区`
+    draft.promptWasCompressed || draft.promptWasTruncated
+      ? draft.promptWasCompressed
+        ? '提示词偏长，已结构化压缩并写入输入区'
+        : `提示词过长，已自动截断到 ${PROMPT_HARD_LIMIT} 字并写入输入区`
       : options.submit
         ? options.maskDataUrl
           ? '已写入输入区，正在提交局部编辑任务'

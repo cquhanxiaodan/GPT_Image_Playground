@@ -47,9 +47,14 @@ export async function submitTask() {
   }
 
   const { task, requestSettings, normalizedParamsPatch } = prepared.draft
-  if (prepared.draft.promptWasTruncated) {
+  if (prepared.draft.promptWasCompressed || prepared.draft.promptWasTruncated) {
     snapshot.setPrompt(task.prompt)
-    snapshot.showToast(`提示词过长，已自动截断到 ${PROMPT_HARD_LIMIT} 字后提交`, 'info')
+    snapshot.showToast(
+      prepared.draft.promptWasCompressed
+        ? '提示词偏长，已按主体、构图、风格、材质、限制项结构化压缩后提交'
+        : `提示词过长，已自动截断到 ${PROMPT_HARD_LIMIT} 字后提交`,
+      'info',
+    )
   }
   if (normalizedParamsPatch) {
     snapshot.setParams(normalizedParamsPatch)

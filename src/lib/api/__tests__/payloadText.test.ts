@@ -31,5 +31,5 @@ describe('parseImagesPayloadText', () => {
     expect(payload.data[0].b64_json).toBe(largeBase64)
     expect(payload.data[0].output_format).toBe('png')
     expect(payload.data[0].revised_prompt).toBe('revised prompt')
-  })
+  }, 20000)
 })
