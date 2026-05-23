@@ -12,4 +12,10 @@ describe('base64ToBlob', () => {
     expect(blob.type).toBe('image/png')
     expect(blob.size).toBe((base64Length * 3) / 4)
   }, 30_000)
+
+  it('rejects invalid large base64 payloads without regex stack pressure', async () => {
+    const base64 = `${'A'.repeat(16 * 1024 * 1024 - 1)}?===`
+
+    await expect(base64ToBlob(base64, 'image/png')).rejects.toThrow('图片 base64 数据格式无效')
+  }, 30_000)
 })

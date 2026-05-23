@@ -559,7 +559,21 @@ function normalizeBase64Payload(base64: string): string {
   if (paddingIndex >= 0 && !/^={1,2}$/.test(normalized.slice(paddingIndex))) {
     throw createApiError('图片 base64 数据格式无效')
   }
-  if (/[^A-Za-z0-9+/=]/.test(normalized)) {
+  for (let index = 0; index < normalized.length; index += 1) {
+    const code = normalized.charCodeAt(index)
+    const isValid =
+      (code >= 65 && code <= 90) ||
+      (code >= 97 && code <= 122) ||
+      (code >= 48 && code <= 57) ||
+      code === 43 ||
+      code === 47 ||
+      code === 61
+    if (!isValid) {
+      throw createApiError('图片 base64 数据格式无效')
+    }
+  }
+
+  if (paddingIndex >= 0 && paddingIndex < normalized.length - 2) {
     throw createApiError('图片 base64 数据格式无效')
   }
 
