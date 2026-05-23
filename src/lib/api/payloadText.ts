@@ -15,6 +15,8 @@ import {
 import { parseSseEvents, tryParseJson } from './sse'
 import type { ApiDebugRequestLogEntry } from './types'
 
+const LARGE_IMAGES_PAYLOAD_TEXT_LENGTH = 2 * 1024 * 1024
+
 function compactResponsesPayloadIfNeeded(payload: unknown): unknown {
   if (!isRecord(payload)) {
     return payload
@@ -28,6 +30,94 @@ function compactResponsesPayloadIfNeeded(payload: unknown): unknown {
     return buildCompactResponsesPayload(payload)
   }
 
+  return payload
+}
+
+function readJsonStringField(text: string, fieldName: string): string | undefined {
+  const keyMarker = `"${fieldName}"`
+  const markerIndex = text.indexOf(keyMarker)
+  if (markerIndex < 0) {
+    return undefined
+  }
+
+  let valueStart = markerIndex + keyMarker.length
+  while (valueStart < text.length && /\s/.test(text[valueStart])) {
+    valueStart += 1
+  }
+  if (text[valueStart] !== ':') {
+    return undefined
+  }
+
+  valueStart += 1
+  while (valueStart < text.length && /\s/.test(text[valueStart])) {
+    valueStart += 1
+  }
+  if (text[valueStart] !== '"') {
+    return undefined
+  }
+
+  const stringStart = valueStart
+  valueStart += 1
+  let index = valueStart
+  let escaped = false
+  let hasEscapes = false
+
+  while (index < text.length) {
+    const char = text[index]
+    if (escaped) {
+      escaped = false
+      index += 1
+      continue
+    }
+
+    if (char === '\\') {
+      escaped = true
+      hasEscapes = true
+      index += 1
+      continue
+    }
+
+    if (char === '"') {
+      return hasEscapes
+        ? JSON.parse(text.slice(stringStart, index + 1)) as string
+        : text.slice(valueStart, index)
+    }
+
+    index += 1
+  }
+
+  return undefined
+}
+
+function parseLargeImagesPayloadText(text: string, logEntry?: ApiDebugRequestLogEntry): unknown | undefined {
+  if (text.length < LARGE_IMAGES_PAYLOAD_TEXT_LENGTH) {
+    return undefined
+  }
+
+  const b64Json = readJsonStringField(text, 'b64_json')
+  const result = b64Json ? undefined : readJsonStringField(text, 'result')
+  const imagePayload = b64Json
+    ? { b64_json: b64Json }
+    : result
+      ? { result }
+      : null
+  if (!imagePayload) {
+    return undefined
+  }
+
+  const payload = {
+    data: [
+      {
+        ...imagePayload,
+        output_format: readJsonStringField(text, 'output_format') ?? undefined,
+        revised_prompt: readJsonStringField(text, 'revised_prompt') ?? undefined,
+      },
+    ],
+  }
+
+  if (logEntry) {
+    logEntry.responseBody = sanitizeDebugValue(payload)
+  }
   return payload
 }
 
@@ -132,6 +222,11 @@ export function parseImagesPayloadText(
   requestId: string | undefined,
   logEntry?: ApiDebugRequestLogEntry,
 ): unknown {
+  const largePayload = parseLargeImagesPayloadText(text, logEntry)
+  if (largePayload !== undefined) {
+    return largePayload
+  }
+
   const directJson = tryParseJson(text)
   if (directJson !== undefined) {
     if (logEntry) {
