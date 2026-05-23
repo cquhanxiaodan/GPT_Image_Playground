@@ -17,6 +17,9 @@ import { createImagesPlanner, mergeTaskResponseTransportMeta } from './requestPl
 import { buildImagesRequestSpec } from './imagesRequestBuilder'
 import { readImagesPayloadStream } from './sseReader'
 import type {
+  AppliedTransportMeta,
+} from '../../types'
+import type {
   ApiImageAsset,
   ApiDebugRequestLogEntry,
   ApiError,
@@ -36,6 +39,46 @@ async function recoverImagesPayloadFromProxyCache(
 
   const cachedResponse = await fetchCachedProxyResponse(requestId, ctx.controller.signal)
   return await readImagesPayload(cachedResponse, logEntry)
+}
+
+async function buildImagesApiResultFromPayload(
+  payload: unknown,
+  opts: CallApiOptions,
+  ctx: SharedRequestContext,
+  transportMeta: AppliedTransportMeta,
+  actualTransport: 'json' | 'stream',
+  streamedImages: ApiImageAsset[],
+  responseStatus: number,
+  requestId: string | undefined,
+  debugLogEntry?: ApiDebugRequestLogEntry,
+): Promise<CallApiResult> {
+  const responseMetaFromCalls = buildTaskResponseMetaFromCalls(
+    collectImageGenerationCallsFromPayload(payload),
+  )
+  const images: ApiImageAsset[] =
+    actualTransport === 'stream' && streamedImages.length > 0
+      ? streamedImages
+      : await parseImagesFromPayload(payload, ctx.mime, ctx.controller.signal)
+  if (!images.length) {
+    if (debugLogEntry) {
+      debugLogEntry.responseBody = sanitizeDebugValue(payload)
+    }
+    throw createApiError('接口未返回可用图片数据', responseStatus, {
+      requestId,
+      details: {
+        responseBody: payload,
+      },
+    })
+  }
+
+  await emitFinalImages(opts, images)
+  return {
+    images,
+    responseMeta: mergeTaskResponseTransportMeta(
+      responseMetaFromCalls,
+      transportMeta,
+    ),
+  }
 }
 
 function normalizeImagesEditCompatibilityError(error: unknown): unknown {
@@ -98,6 +141,7 @@ export async function callImagesApi(
             )
           : null
       let payload: unknown
+      let usedRecoveredPayload = false
       try {
         payload = streamResult?.payload ?? (await readImagesPayload(response, debugLogEntry))
       } catch (parseError) {
@@ -106,35 +150,43 @@ export async function callImagesApi(
           throw parseError
         }
         payload = recoveredPayload
+        usedRecoveredPayload = true
       }
       const streamedImages = streamResult?.streamedImages ?? []
       actualTransport = streamResult?.actualTransport ?? 'json'
-      const responseMetaFromCalls = buildTaskResponseMetaFromCalls(
-        collectImageGenerationCallsFromPayload(payload),
-      )
-      const images: ApiImageAsset[] =
-        actualTransport === 'stream' && streamedImages.length > 0
-          ? streamedImages
-          : await parseImagesFromPayload(payload, ctx.mime, ctx.controller.signal)
-      if (!images.length) {
-        if (debugLogEntry) {
-          debugLogEntry.responseBody = sanitizeDebugValue(payload)
-        }
-        throw createApiError('接口未返回可用图片数据', response.status, {
+      const plannerMeta = planner.completeSuccess(actualTransport)
+      try {
+        return await buildImagesApiResultFromPayload(
+          payload,
+          opts,
+          ctx,
+          plannerMeta,
+          actualTransport,
+          streamedImages,
+          response.status,
           requestId,
-          details: {
-            responseBody: payload,
-          },
-        })
-      }
+          debugLogEntry,
+        )
+      } catch (resultError) {
+        if (usedRecoveredPayload || actualTransport === 'stream') {
+          throw resultError
+        }
 
-      await emitFinalImages(opts, images)
-      return {
-        images,
-        responseMeta: mergeTaskResponseTransportMeta(
-          responseMetaFromCalls,
-          planner.completeSuccess(actualTransport),
-        ),
+        const recoveredPayload = await recoverImagesPayloadFromProxyCache(requestId, ctx, debugLogEntry)
+        if (recoveredPayload == null) {
+          throw resultError
+        }
+        return await buildImagesApiResultFromPayload(
+          recoveredPayload,
+          opts,
+          ctx,
+          plannerMeta,
+          'json',
+          [],
+          response.status,
+          requestId,
+          debugLogEntry,
+        )
       }
     } catch (error) {
       if (!planner.failAndAdvance(error)) {

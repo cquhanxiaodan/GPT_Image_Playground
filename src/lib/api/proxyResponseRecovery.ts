@@ -10,12 +10,20 @@ interface CachedProxyResponsePayload {
 }
 
 function base64ToBytes(base64: string): Uint8Array {
-  const binary = atob(base64)
-  const bytes = new Uint8Array(binary.length)
-  for (let index = 0; index < binary.length; index += 1) {
-    bytes[index] = binary.charCodeAt(index)
+  const chunkSize = 0x8000
+  const estimatedLength = Math.max(0, Math.floor((base64.length * 3) / 4))
+  const bytes = new Uint8Array(estimatedLength)
+  let writeOffset = 0
+
+  for (let index = 0; index < base64.length; index += chunkSize) {
+    const binary = atob(base64.slice(index, index + chunkSize))
+    for (let binaryIndex = 0; binaryIndex < binary.length; binaryIndex += 1) {
+      bytes[writeOffset] = binary.charCodeAt(binaryIndex)
+      writeOffset += 1
+    }
   }
-  return bytes
+
+  return writeOffset === bytes.length ? bytes : bytes.slice(0, writeOffset)
 }
 
 function buildHeaders(input: CachedProxyResponsePayload['headers']): Headers {
