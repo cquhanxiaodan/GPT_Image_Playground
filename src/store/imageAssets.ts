@@ -56,6 +56,7 @@ export interface SaveBlobImageAssetOptions extends SaveImageAssetOptions {
   thumbnailMimeType?: string | null
   thumbnailWidth?: number | null
   thumbnailHeight?: number | null
+  skipThumbnail?: boolean
 }
 
 const inferredImageAssetMetadataCache = new Map<string, ImageAssetMetadata>()
@@ -154,7 +155,7 @@ export async function saveImageAssetBlob(
   let thumbnailWidth = options.thumbnailWidth ?? null
   let thumbnailHeight = options.thumbnailHeight ?? null
 
-  if (!thumbnailBlob || !width || !height) {
+  if (!options.skipThumbnail && (!thumbnailBlob || !width || !height)) {
     const generatedThumbnail = await buildThumbnailForBlob(blob)
     if (generatedThumbnail) {
       thumbnailBlob ??= generatedThumbnail.thumbnailBlob
@@ -350,15 +351,33 @@ export interface StoreImageOptions {
   thumbnailMimeType?: string | null
   thumbnailWidth?: number | null
   thumbnailHeight?: number | null
+  skipThumbnail?: boolean
 }
 
 export async function storeImage(
   input: Blob | string,
   options: StoreImageOptions = {},
 ): Promise<string> {
-  const { stageOnly, thumbnailBlob, thumbnailMimeType, thumbnailWidth, thumbnailHeight, ...baseOptions } = options
+  const { stageOnly, thumbnailBlob, thumbnailMimeType, thumbnailWidth, thumbnailHeight, skipThumbnail, ...baseOptions } = options
   if (input instanceof Blob) {
-    return saveImageAssetBlob(input, { ...baseOptions, thumbnailBlob, thumbnailMimeType, thumbnailWidth, thumbnailHeight })
+    try {
+      return await saveImageAssetBlob(input, { ...baseOptions, thumbnailBlob, thumbnailMimeType, thumbnailWidth, thumbnailHeight, skipThumbnail })
+    } catch (error) {
+      if (thumbnailBlob || thumbnailMimeType || thumbnailWidth || thumbnailHeight) {
+        throw error
+      }
+      console.warn('图片完整入库失败，已降级为不生成缩略图保存原图。', error)
+      return await saveImageAssetBlob(input, {
+        ...baseOptions,
+        width: baseOptions.width ?? null,
+        height: baseOptions.height ?? null,
+        thumbnailBlob: null,
+        thumbnailMimeType: null,
+        thumbnailWidth: null,
+        thumbnailHeight: null,
+        skipThumbnail: true,
+      })
+    }
   }
   if (stageOnly) {
     return stageImageAssetReference(input)
