@@ -1,11 +1,21 @@
 import { describe, expect, it } from 'vitest'
 import {
+  PROMPT_COMPRESSION_THRESHOLD,
   PROMPT_COMPRESSION_TARGET,
   compressPromptText,
   preparePromptText,
 } from './prompt'
 
 describe('prompt preparation', () => {
+  it('keeps prompts under the compression threshold unchanged', () => {
+    const prompt = '主体是一张产品海报。构图为居中展示。风格真实高级。材质清晰。不要出现水印。'
+      .repeat(3)
+
+    expect(prompt.length).toBeLessThan(PROMPT_COMPRESSION_THRESHOLD)
+    expect(compressPromptText(prompt)).toBe(prompt)
+    expect(preparePromptText(prompt).compressed).toBe(false)
+  })
+
   it('compresses long prompts into structured sections', () => {
     const sentence = '生成一张东方神话史诗场景，画面主体是十八层环形深渊。构图采用超广角俯瞰视角，前景有黑石高台。风格要庄严神秘，具有电影级史诗氛围。材质包含黑石、青铜、雾气和暗红光线。不要出现文字、Logo、水印和现代元素。'
     const prompt = sentence.repeat(16)

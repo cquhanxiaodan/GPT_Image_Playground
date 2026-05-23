@@ -81,6 +81,44 @@ async function buildImagesApiResultFromPayload(
   }
 }
 
+async function tryBuildImagesApiResultFromProxyCache(
+  requestId: string | undefined,
+  opts: CallApiOptions,
+  ctx: SharedRequestContext,
+  transportMeta: AppliedTransportMeta | undefined,
+  responseStatus: number | undefined,
+  debugLogEntry?: ApiDebugRequestLogEntry,
+): Promise<CallApiResult | null> {
+  if (!requestId || !transportMeta) {
+    return null
+  }
+
+  const recoveredPayload = await recoverImagesPayloadFromProxyCache(
+    requestId,
+    ctx,
+    debugLogEntry,
+  )
+  if (recoveredPayload == null) {
+    return null
+  }
+
+  try {
+    return await buildImagesApiResultFromPayload(
+      recoveredPayload,
+      opts,
+      ctx,
+      transportMeta,
+      'json',
+      [],
+      responseStatus ?? 200,
+      requestId,
+      debugLogEntry,
+    )
+  } catch {
+    return null
+  }
+}
+
 function normalizeImagesEditCompatibilityError(error: unknown): unknown {
   if (!(error instanceof Error)) {
     return error
@@ -108,6 +146,10 @@ export async function callImagesApi(
   const { settings, inputImageDataUrls } = opts
   const isEdit = inputImageDataUrls.length > 0
   const planner = createImagesPlanner(settings, { isEdit })
+  let previousRecoverableRequestId: string | undefined
+  let previousRecoveryMeta: AppliedTransportMeta | undefined
+  let previousRecoveryStatus: number | undefined
+  let previousRecoveryLogEntry: ApiDebugRequestLogEntry | undefined
 
   while (true) {
     const plan = planner.currentPlan
@@ -131,8 +173,15 @@ export async function callImagesApi(
 
       const requestId = readDevProxyRequestId(response.headers)
       const shouldReadAsStream = plan.transport === 'stream' || isSseResponse(response)
+      const shouldReadStreamAsFullBody = ctx.forceProxy && shouldReadAsStream
+      if (requestId) {
+        previousRecoverableRequestId = requestId
+        previousRecoveryMeta = planner.completeSuccess(shouldReadAsStream ? 'stream' : 'json')
+        previousRecoveryLogEntry = debugLogEntry
+        previousRecoveryStatus = response.status
+      }
       const streamResult =
-        shouldReadAsStream
+        shouldReadAsStream && !shouldReadStreamAsFullBody
           ? await readImagesPayloadStream(
               response,
               ctx.mime,
@@ -153,8 +202,11 @@ export async function callImagesApi(
         usedRecoveredPayload = true
       }
       const streamedImages = streamResult?.streamedImages ?? []
-      actualTransport = streamResult?.actualTransport ?? 'json'
+      actualTransport = streamResult?.actualTransport ?? (shouldReadAsStream ? 'stream' : 'json')
       const plannerMeta = planner.completeSuccess(actualTransport)
+      if (requestId) {
+        previousRecoveryMeta = plannerMeta
+      }
       try {
         return await buildImagesApiResultFromPayload(
           payload,
@@ -189,6 +241,18 @@ export async function callImagesApi(
         )
       }
     } catch (error) {
+      const recoveredResult = await tryBuildImagesApiResultFromProxyCache(
+        previousRecoverableRequestId,
+        opts,
+        ctx,
+        previousRecoveryMeta,
+        previousRecoveryStatus,
+        previousRecoveryLogEntry,
+      )
+      if (recoveredResult) {
+        return recoveredResult
+      }
+
       if (!planner.failAndAdvance(error)) {
         throw isEdit ? normalizeImagesEditCompatibilityError(error) : error
       }

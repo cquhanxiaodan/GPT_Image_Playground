@@ -377,12 +377,11 @@ export async function readResponsesPayloadStream(
 
 export async function readImagesPayloadStream(
   response: Response,
-  fallbackMime: string,
+  _fallbackMime: string,
   signal: AbortSignal,
   logEntry?: ApiDebugRequestLogEntry,
 ): Promise<StreamedPayloadResult> {
   const requestId = attachDebugResponseMeta(logEntry, response)
-  const emittedImageSignatures = new Set<string>()
   let streamedFinalImageCount = 0
   const streamedImages: ApiImageAsset[] = []
   const completedItems: Record<string, unknown>[] = []
@@ -407,18 +406,6 @@ export async function readImagesPayloadStream(
       } else if (event.json.type == null && hasDirectImagePayload(event.json)) {
         standaloneImages.push(event.json)
       }
-
-      streamedFinalImageCount += await emitNewImagesFromPayload(
-        event.json,
-        fallbackMime,
-        signal,
-        emittedImageSignatures,
-        async (images) => {
-          for (const image of images) {
-            streamedImages.push(image)
-          }
-        },
-      )
     },
   )
 
